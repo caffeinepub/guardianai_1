@@ -1,0 +1,353 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Font Faces ──────────────────────────────────────────── */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cabinet Grotesk";
+  src: url("/assets/fonts/CabinetGrotesk[wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sora";
+  src: url("/assets/fonts/Sora[wght].woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/assets/fonts/GeistMono[wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* ── Design Tokens ───────────────────────────────────────── */
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Deep dark navy theme */
+    --background: 0.1 0.02 265;
+    --foreground: 0.95 0.01 265;
+
+    --card: 0.14 0.025 265;
+    --card-foreground: 0.95 0.01 265;
+
+    --popover: 0.18 0.03 265;
+    --popover-foreground: 0.95 0.01 265;
+
+    /* Teal/Cyan primary */
+    --primary: 0.78 0.15 195;
+    --primary-foreground: 0.08 0.02 265;
+
+    --secondary: 0.18 0.03 265;
+    --secondary-foreground: 0.85 0.02 265;
+
+    --muted: 0.18 0.02 265;
+    --muted-foreground: 0.58 0.04 265;
+
+    /* Teal accent */
+    --accent: 0.2 0.04 195;
+    --accent-foreground: 0.78 0.15 195;
+
+    --destructive: 0.65 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.25 0.04 265;
+    --input: 0.2 0.03 265;
+    --ring: 0.78 0.15 195;
+
+    /* Charts */
+    --chart-1: 0.78 0.15 195;
+    --chart-2: 0.72 0.18 155;
+    --chart-3: 0.68 0.22 310;
+    --chart-4: 0.75 0.18 55;
+    --chart-5: 0.65 0.22 25;
+
+    /* Sidebar */
+    --sidebar: 0.12 0.025 265;
+    --sidebar-foreground: 0.88 0.02 265;
+    --sidebar-primary: 0.78 0.15 195;
+    --sidebar-primary-foreground: 0.08 0.02 265;
+    --sidebar-accent: 0.18 0.03 265;
+    --sidebar-accent-foreground: 0.78 0.15 195;
+    --sidebar-border: 0.22 0.04 265;
+    --sidebar-ring: 0.78 0.15 195;
+
+    /* Custom brand tokens */
+    --brand-teal: 0.78 0.15 195;
+    --brand-teal-dim: 0.62 0.12 195;
+    --brand-teal-glow: 0.85 0.18 195;
+    --brand-violet: 0.68 0.22 310;
+    --brand-amber: 0.78 0.18 70;
+    --brand-red: 0.65 0.22 25;
+    --brand-green: 0.72 0.18 155;
+
+    --glow-teal: 0 0 40px oklch(0.78 0.15 195 / 0.3);
+    --glow-violet: 0 0 40px oklch(0.68 0.22 310 / 0.3);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Sora", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Custom Utilities ──────────────────────────────────── */
+@layer utilities {
+  .font-display {
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+
+  .font-heading {
+    font-family: "Cabinet Grotesk", sans-serif;
+  }
+
+  .font-mono {
+    font-family: "Geist Mono", monospace;
+  }
+
+  .text-gradient-teal {
+    background: linear-gradient(
+      135deg,
+      oklch(0.85 0.18 195),
+      oklch(0.72 0.18 155)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(
+      135deg,
+      oklch(0.85 0.18 195),
+      oklch(0.78 0.22 265),
+      oklch(0.68 0.22 310)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-mesh-dark {
+    background-color: oklch(0.1 0.02 265);
+    background-image:
+      radial-gradient(ellipse at 20% 50%, oklch(0.68 0.22 310 / 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, oklch(0.78 0.15 195 / 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, oklch(0.72 0.18 265 / 0.1) 0%, transparent 50%);
+  }
+
+  .bg-card-glass {
+    background: oklch(0.14 0.025 265 / 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid oklch(0.25 0.04 265 / 0.6);
+  }
+
+  .glow-teal {
+    box-shadow: 0 0 30px oklch(0.78 0.15 195 / 0.25);
+  }
+
+  .glow-teal-strong {
+    box-shadow: 0 0 60px oklch(0.78 0.15 195 / 0.4), 0 0 120px oklch(0.78 0.15 195 / 0.15);
+  }
+
+  .border-teal {
+    border-color: oklch(0.78 0.15 195 / 0.4);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.25 0.04 265) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: oklch(0.25 0.04 265);
+    border-radius: 2px;
+  }
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes particle-drift {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100px) translateX(30px); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px oklch(0.78 0.15 195 / 0.3); }
+  50% { box-shadow: 0 0 40px oklch(0.78 0.15 195 / 0.6); }
+}
+
+@keyframes slide-up-fade {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.18 0.03 265) 25%,
+    oklch(0.22 0.04 265) 50%,
+    oklch(0.18 0.03 265) 75%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+/* ── Component Overrides ─────────────────────────────────── */
+.dashboard-sidebar {
+  background: oklch(0.11 0.022 265);
+  border-right: 1px solid oklch(0.2 0.035 265);
+}
+
+/* Sidebar nav active item — strong left-border indicator */
+.nav-item-active {
+  background: linear-gradient(90deg, oklch(0.78 0.15 195 / 0.12) 0%, oklch(0.78 0.15 195 / 0.04) 100%);
+  color: oklch(0.85 0.16 195);
+  box-shadow: inset 3px 0 0 oklch(0.78 0.15 195);
+}
+
+.nav-item-active svg {
+  color: oklch(0.85 0.16 195);
+}
+
+/* Stat cards — richer tonal gradient + accent glow on hover */
+.stat-card-teal {
+  background: linear-gradient(145deg,
+    oklch(0.18 0.08 195 / 0.9) 0%,
+    oklch(0.15 0.04 220 / 0.6) 60%,
+    oklch(0.13 0.025 265) 100%);
+  border: 1px solid oklch(0.78 0.15 195 / 0.35);
+}
+.stat-card-teal:hover {
+  border-color: oklch(0.78 0.15 195 / 0.6);
+  box-shadow: 0 0 24px oklch(0.78 0.15 195 / 0.18), inset 0 1px 0 oklch(0.78 0.15 195 / 0.15);
+}
+
+.stat-card-violet {
+  background: linear-gradient(145deg,
+    oklch(0.18 0.08 310 / 0.9) 0%,
+    oklch(0.15 0.04 290 / 0.6) 60%,
+    oklch(0.13 0.025 265) 100%);
+  border: 1px solid oklch(0.68 0.22 310 / 0.35);
+}
+.stat-card-violet:hover {
+  border-color: oklch(0.68 0.22 310 / 0.6);
+  box-shadow: 0 0 24px oklch(0.68 0.22 310 / 0.18), inset 0 1px 0 oklch(0.68 0.22 310 / 0.15);
+}
+
+.stat-card-amber {
+  background: linear-gradient(145deg,
+    oklch(0.18 0.09 70 / 0.9) 0%,
+    oklch(0.15 0.05 55 / 0.6) 60%,
+    oklch(0.13 0.025 265) 100%);
+  border: 1px solid oklch(0.78 0.18 70 / 0.35);
+}
+.stat-card-amber:hover {
+  border-color: oklch(0.78 0.18 70 / 0.6);
+  box-shadow: 0 0 24px oklch(0.78 0.18 70 / 0.18), inset 0 1px 0 oklch(0.78 0.18 70 / 0.15);
+}
+
+.stat-card-red {
+  background: linear-gradient(145deg,
+    oklch(0.18 0.09 25 / 0.9) 0%,
+    oklch(0.15 0.05 15 / 0.6) 60%,
+    oklch(0.13 0.025 265) 100%);
+  border: 1px solid oklch(0.65 0.22 25 / 0.35);
+}
+.stat-card-red:hover {
+  border-color: oklch(0.65 0.22 25 / 0.6);
+  box-shadow: 0 0 24px oklch(0.65 0.22 25 / 0.18), inset 0 1px 0 oklch(0.65 0.22 25 / 0.15);
+}
+
+/* Hero section dramatic layering */
+.hero-bg {
+  background-color: oklch(0.09 0.025 265);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 40%, oklch(0.68 0.22 310 / 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 25%, oklch(0.78 0.15 195 / 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 90%, oklch(0.6 0.15 250 / 0.12) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: auto, auto, auto, 200px 200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-shimmer,
+  .animate-glow-pulse {
+    animation: none;
+  }
+}
