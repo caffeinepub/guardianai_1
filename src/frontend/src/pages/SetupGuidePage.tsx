@@ -204,12 +204,77 @@ function StepCard({
   );
 }
 
+// ── Collapsible Setup Section ─────────────────────────────
+function CollapsibleSetup({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        border: `1px solid ${open ? "oklch(0.78 0.15 195 / 0.35)" : "oklch(0.22 0.04 265)"}`,
+        background: open
+          ? "oklch(0.15 0.03 195 / 0.1)"
+          : "oklch(0.12 0.025 265)",
+      }}
+    >
+      <button
+        type="button"
+        className="w-full flex items-center justify-between p-3.5 text-left"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        {open ? (
+          <ChevronUp size={14} className="text-muted-foreground" />
+        ) : (
+          <ChevronDown size={14} className="text-muted-foreground" />
+        )}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 border-t border-border/30">{children}</div>
+      )}
+    </div>
+  );
+}
+
+// ── Numbered step list ────────────────────────────────────
+function SetupStepList({ steps }: { steps: string[] }) {
+  return (
+    <ol className="mt-3 space-y-2">
+      {steps.map((step, i) => (
+        <li key={step} className="flex items-start gap-2.5">
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+            style={{
+              background: "oklch(0.78 0.15 195)",
+              color: "oklch(0.08 0.02 265)",
+            }}
+          >
+            {i + 1}
+          </span>
+          <span className="text-xs text-muted-foreground leading-relaxed">
+            {step}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 // ── Setup Guide Page ──────────────────────────────────────
 export default function SetupGuidePage({
   selectedChild: selectedChildProp,
 }: {
   selectedChild?: { name: string } | null;
 } = {}) {
+  const TOTAL_STEPS = 5;
   const [activeStep, setActiveStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
@@ -229,7 +294,9 @@ export default function SetupGuidePage({
 
   const handleMarkComplete = (step: number) => {
     setCompletedSteps((prev) => new Set([...prev, step]));
-    if (step < 4) setActiveStep(step + 1);
+    if (step < TOTAL_STEPS) {
+      setActiveStep(step + 1);
+    }
   };
 
   return (
@@ -258,14 +325,14 @@ export default function SetupGuidePage({
           Device
         </h1>
         <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
-          Follow these 4 simple steps to get full protection running in under 5
-          minutes.
+          Follow these 5 simple steps to get full background protection running
+          in under 10 minutes.
         </p>
       </div>
 
       {/* Progress bar */}
       <div className="flex items-center gap-1 px-4">
-        {[1, 2, 3, 4].map((step, i) => (
+        {[1, 2, 3, 4, 5].map((step, i) => (
           <div key={step} className="flex items-center flex-1">
             <div
               className="w-full h-1.5 rounded-full transition-all duration-500"
@@ -277,12 +344,12 @@ export default function SetupGuidePage({
                     : "oklch(0.22 0.04 265)",
               }}
             />
-            {i < 3 && <div className="w-2 shrink-0" />}
+            {i < 4 && <div className="w-2 shrink-0" />}
           </div>
         ))}
       </div>
       <p className="text-center text-xs text-muted-foreground -mt-4">
-        {completedSteps.size} of 4 steps completed
+        {completedSteps.size} of {TOTAL_STEPS} steps completed
       </p>
 
       {/* Steps */}
@@ -460,6 +527,52 @@ export default function SetupGuidePage({
               ))}
             </div>
 
+            {/* Android detailed setup */}
+            <CollapsibleSetup
+              title="🤖 Android Setup (Detailed)"
+              defaultOpen={false}
+            >
+              <img
+                src="/assets/generated/android-permissions-screen.dim_600x400.png"
+                alt="Android permissions setup"
+                className="w-full rounded-lg object-cover mt-3 mb-3"
+                style={{ maxHeight: "180px" }}
+              />
+              <SetupStepList
+                steps={[
+                  "Install GuardianAI Child from Google Play Store",
+                  'Grant Location Permission: Settings → Apps → GuardianAI → Permissions → Location → "Allow all the time"',
+                  "Grant Usage Access: Settings → Digital Wellbeing → Usage Access → GuardianAI → Enable",
+                  'Disable Battery Optimization: Settings → Battery → Battery Optimization → GuardianAI → "Don\'t optimize"',
+                  "Enable Device Admin (optional, for remote lock): Settings → Security → Device Administrators → GuardianAI",
+                  'Open GuardianAI Child app, enter your parent code, and tap "Link Device"',
+                ]}
+              />
+            </CollapsibleSetup>
+
+            {/* iOS detailed setup */}
+            <CollapsibleSetup
+              title="🍎 iOS Setup (Detailed)"
+              defaultOpen={false}
+            >
+              <img
+                src="/assets/generated/ios-screentime-setup.dim_600x400.png"
+                alt="iOS Screen Time setup"
+                className="w-full rounded-lg object-cover mt-3 mb-3"
+                style={{ maxHeight: "180px" }}
+              />
+              <SetupStepList
+                steps={[
+                  "Install GuardianAI Child from the App Store",
+                  "Enable Screen Time: Settings → Screen Time → Turn On Screen Time (if not already on)",
+                  "Set up Family Sharing: Settings → [Your Name] → Family Sharing → Add Family Member → your child's Apple ID",
+                  'Grant Location: Settings → Privacy & Security → Location Services → GuardianAI → "Always"',
+                  "Allow Notifications: Settings → Notifications → GuardianAI → Allow Notifications → toggle on",
+                  'Open GuardianAI Child app, enter your parent code, and tap "Link Device"',
+                ]}
+              />
+            </CollapsibleSetup>
+
             {/* Parent Code */}
             <div
               className="rounded-xl p-3 flex flex-col gap-2"
@@ -576,16 +689,158 @@ export default function SetupGuidePage({
               ))}
             </ul>
 
-            <Link to="/dashboard">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-8 text-muted-foreground self-start"
+              onClick={() => handleMarkComplete(4)}
+              data-ocid="setup_guide.step4.complete_button"
+            >
+              <CheckCircle size={12} className="mr-1" />
+              Mark Done
+            </Button>
+          </div>
+        </StepCard>
+
+        {/* Step 5: Background Reports */}
+        <StepCard
+          num={5}
+          title="Receive Background Reports"
+          description="Get real-time alerts and scheduled reports on your phone"
+          image="/assets/generated/parent-report-notification.dim_600x400.png"
+          imageAlt="Parent report notifications"
+          active={activeStep === 5}
+          completed={completedSteps.has(5)}
+          onClick={() => handleStepClick(5)}
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              GuardianAI runs silently in the background on your child's device
+              and sends you scheduled reports and instant alerts.
+            </p>
+
+            {/* Report types */}
+            <div className="flex flex-col gap-2">
+              {[
+                {
+                  emoji: "🌅",
+                  title: "Daily Summary",
+                  desc: "Every morning — yesterday's location history, screen time, and activity overview",
+                },
+                {
+                  emoji: "⚡",
+                  title: "Real-Time Alerts",
+                  desc: "Immediate notification when bullying is detected, safe zone is crossed, or concerning content is found",
+                },
+                {
+                  emoji: "📊",
+                  title: "Weekly Deep-Dive",
+                  desc: "Sunday evenings — full AI report with trends, comparisons, and parenting tips",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg p-3 flex gap-2.5"
+                  style={{
+                    background: "oklch(0.12 0.025 265)",
+                    border: "1px solid oklch(0.22 0.04 265)",
+                  }}
+                >
+                  <span className="text-lg">{item.emoji}</span>
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">
+                      {item.title}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      {item.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Background monitoring image */}
+            <img
+              src="/assets/generated/setup-background-monitoring.dim_600x400.png"
+              alt="Background monitoring active"
+              className="w-full rounded-xl object-cover"
+              style={{ maxHeight: "160px" }}
+            />
+
+            {/* Enable push notifications */}
+            <div
+              className="rounded-xl p-3 flex flex-col gap-1.5"
+              style={{
+                background: "oklch(0.18 0.06 195 / 0.15)",
+                border: "1px solid oklch(0.78 0.15 195 / 0.3)",
+              }}
+            >
+              <span className="text-xs font-semibold text-foreground">
+                Enable push notifications on your phone:
+              </span>
+              <div className="text-[10px] text-muted-foreground">
+                <strong>iOS:</strong> Settings → Notifications → GuardianAI
+                Parent → Allow Notifications
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                <strong>Android:</strong> Settings → Apps → GuardianAI →
+                Notifications → Allow
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                <strong>Web:</strong> Allow notifications when prompted in your
+                browser
+              </div>
+            </div>
+
+            {/* Completion card */}
+            <div
+              className="rounded-xl p-4 flex flex-col gap-2"
+              style={{
+                background: "oklch(0.18 0.06 155 / 0.2)",
+                border: "1px solid oklch(0.72 0.18 155 / 0.4)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Shield size={16} style={{ color: "oklch(0.72 0.18 155)" }} />
+                <span
+                  className="font-heading font-semibold text-sm"
+                  style={{ color: "oklch(0.72 0.18 155)" }}
+                >
+                  🎉 Monitoring is now active!
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                GuardianAI is fully set up and protecting{" "}
+                <strong className="text-foreground">
+                  {selectedChild?.name ?? "your child"}
+                </strong>
+                's device in the background. You'll start receiving reports and
+                alerts shortly.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Link to="/dashboard">
+                <Button
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:opacity-90 text-xs h-8"
+                  data-ocid="setup_guide.go_dashboard.button"
+                >
+                  <Shield size={12} className="mr-1" />
+                  Go to Dashboard
+                </Button>
+              </Link>
               <Button
                 size="sm"
-                className="bg-primary text-primary-foreground hover:opacity-90 text-xs h-8"
-                data-ocid="setup_guide.go_dashboard.button"
+                variant="ghost"
+                className="text-xs h-8 text-muted-foreground"
+                onClick={() => handleMarkComplete(5)}
+                data-ocid="setup_guide.step5.complete_button"
               >
-                <Shield size={12} className="mr-1" />
-                Go to Dashboard
+                <CheckCircle size={12} className="mr-1" />
+                Complete Setup
               </Button>
-            </Link>
+            </div>
           </div>
         </StepCard>
       </div>

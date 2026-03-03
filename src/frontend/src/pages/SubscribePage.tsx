@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -358,27 +359,145 @@ export default function SubscribePage() {
             </ul>
           </div>
 
-          {/* Subscribe button */}
-          <Button
-            data-ocid="subscribe.checkout.button"
-            onClick={handleSubscribe}
-            disabled={isLoading}
-            className="w-full h-12 font-semibold text-base"
-            style={{
-              background: planDetails.color,
-              color: "oklch(0.08 0.02 265)",
-              boxShadow: `0 0 30px ${planDetails.color}30`,
-            }}
-          >
-            {isLoading ? (
-              <Loader2 size={16} className="animate-spin mr-2" />
-            ) : (
-              <CreditCard size={16} className="mr-2" />
-            )}
-            {isLoading
-              ? "Processing..."
-              : `Subscribe Now — ${planDetails.price}/mo`}
-          </Button>
+          {/* Payment method selector */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
+              Payment Method
+            </p>
+            <Tabs defaultValue="card" className="w-full">
+              <TabsList
+                className="w-full grid grid-cols-4 h-10 mb-4"
+                style={{
+                  background: "oklch(0.12 0.025 265)",
+                  border: "1px solid oklch(0.22 0.04 265)",
+                }}
+              >
+                <TabsTrigger
+                  data-ocid="subscribe.payment_card.tab"
+                  value="card"
+                  className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Card
+                </TabsTrigger>
+                <TabsTrigger
+                  data-ocid="subscribe.payment_paypal.tab"
+                  value="paypal"
+                  className="text-xs data-[state=active]:bg-[oklch(0.55_0.18_225)] data-[state=active]:text-white"
+                >
+                  PayPal
+                </TabsTrigger>
+                <TabsTrigger
+                  data-ocid="subscribe.payment_apple.tab"
+                  value="apple"
+                  className="text-xs data-[state=active]:bg-foreground data-[state=active]:text-background"
+                >
+                  Apple
+                </TabsTrigger>
+                <TabsTrigger
+                  data-ocid="subscribe.payment_google.tab"
+                  value="google"
+                  className="text-xs data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                >
+                  G Pay
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="card">
+                <Button
+                  data-ocid="subscribe.checkout.button"
+                  onClick={handleSubscribe}
+                  disabled={isLoading}
+                  className="w-full h-12 font-semibold text-base"
+                  style={{
+                    background: planDetails.color,
+                    color: "oklch(0.08 0.02 265)",
+                    boxShadow: `0 0 30px ${planDetails.color}30`,
+                  }}
+                >
+                  {isLoading ? (
+                    <Loader2 size={16} className="animate-spin mr-2" />
+                  ) : (
+                    <CreditCard size={16} className="mr-2" />
+                  )}
+                  {isLoading
+                    ? "Processing..."
+                    : `Pay ${planDetails.price}/mo with Card`}
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="paypal">
+                <Button
+                  data-ocid="subscribe.paypal.button"
+                  onClick={async () => {
+                    toast.info("Redirecting to PayPal...");
+                    await new Promise((r) => setTimeout(r, 1500));
+                    toast.success("Demo: PayPal subscription activated!");
+                    updatePlan(planEnum);
+                    setSessionStatus("success");
+                  }}
+                  className="w-full h-12 font-bold text-base"
+                  style={{
+                    background: "oklch(0.55 0.18 225)",
+                    color: "white",
+                    boxShadow: "0 0 20px oklch(0.55 0.18 225 / 0.3)",
+                  }}
+                >
+                  <span className="mr-2 font-black italic">P</span>
+                  Pay with PayPal — {planDetails.price}/mo
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="apple">
+                <Button
+                  data-ocid="subscribe.apple_pay.button"
+                  onClick={async () => {
+                    toast.info("Processing Apple Pay...");
+                    await new Promise((r) => setTimeout(r, 1000));
+                    toast.success("Demo: Apple Pay subscription activated!");
+                    updatePlan(planEnum);
+                    setSessionStatus("success");
+                  }}
+                  className="w-full h-12 font-bold text-base"
+                  style={{
+                    background: "oklch(0.98 0 0)",
+                    color: "oklch(0.08 0 0)",
+                    boxShadow: "0 0 20px oklch(0.5 0 0 / 0.2)",
+                  }}
+                >
+                  Pay — {planDetails.price}/mo
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="google">
+                <Button
+                  data-ocid="subscribe.google_pay.button"
+                  onClick={async () => {
+                    toast.info("Processing Google Pay...");
+                    await new Promise((r) => setTimeout(r, 1000));
+                    toast.success("Demo: Google Pay subscription activated!");
+                    updatePlan(planEnum);
+                    setSessionStatus("success");
+                  }}
+                  className="w-full h-12 font-bold text-base border border-gray-300"
+                  style={{
+                    background: "white",
+                    color: "oklch(0.2 0 0)",
+                  }}
+                >
+                  <span className="font-black mr-1">G</span> Pay —{" "}
+                  {planDetails.price}/mo
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Payment methods banner */}
+          <img
+            src="/assets/generated/payment-methods-banner.dim_800x300.png"
+            alt="Accepted payment methods"
+            className="w-full rounded-xl object-cover"
+            style={{ maxHeight: "80px" }}
+          />
 
           {/* Security note */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">

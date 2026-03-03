@@ -1,49 +1,46 @@
-# GuardianAI
+# GuardianAI — Flagship Update
 
 ## Current State
-- Marketing landing page at `/` with hero, features, how-it-works, testimonials, and pricing sections
-- 8-section parent dashboard at `/dashboard/*`: Overview, Location, Screen Time, Content Analysis, Bullying Detection, Spending Monitor, AI Coach, Settings
-- Backend: Motoko with child profiles, location, screen time, content, alerts, recommendations, safe zones, spending, and parent settings
-- Authorization component installed
-- 2 generated images present: `guardian-shield-icon-transparent.dim_400x400.png`, `hero-app-mockup.dim_800x900.png`
-- No payments/subscriptions, no auth flow (login/signup), no child device setup guide
-- All pricing CTAs link directly to `/dashboard` (no checkout)
+- Full marketing landing page with hero, features, pricing, testimonials, footer
+- Parent dashboard with 8 sections: Overview, Location, Screen Time, Content, Bullying, Spending, AI Coach, Settings
+- Auth pages: Login, Signup, Subscribe (Stripe only)
+- Setup guide page (basic 4-step flow inside dashboard + standalone route)
+- All images are generated but some fail to load in certain contexts
+- Footer/legal links are non-functional (no pages behind them)
+- Payment page only shows Stripe; no PayPal, Apple Pay, Google Pay, crypto
+- No payout/payment-details settings for the app owner
+- No Privacy Policy, Terms of Service, COPPA, or Support pages
+- No in-app background monitoring install walkthrough (detailed)
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Parent Auth pages**: `/login` and `/signup` with email + password fields; store email/password in backend; redirect to `/dashboard` on success
-- **Stripe payment integration**: Subscription checkout for Family ($9.99/mo) and Guardian Pro ($19.99/mo) plans; payment confirmation page at `/subscribe/:plan`
-- **Child Device Setup Guide**: Dedicated page at `/setup-guide` explaining step-by-step how parents install the tracking app on the child's phone (Android + iOS); include QR code instructions, screenshots, and tips
-- **Images throughout the app**: Generate and wire 8+ images:
-  - Feature section illustration images (6 feature cards)
-  - App screenshot showing location tracking
-  - App screenshot showing content analysis
-  - App screenshot showing bullying detection dashboard
-  - Testimonial avatar photos (3)
-  - "How It Works" step illustrations
-- **Password tracking**: Backend stores hashed parent email + password for account login
-- **Dashboard subscription gate**: Show upgrade prompt if user is on free plan
+- `/privacy` — Full Privacy Policy page (COPPA-compliant, data collection, retention, sharing)
+- `/terms` — Terms of Service page (subscription terms, acceptable use, liability)
+- `/support` — Support center with FAQ categories, contact form, live chat placeholder
+- `/legal` — Legal hub linking to all legal pages
+- `/payment-settings` (admin route inside dashboard) — Payout configuration page where owner enters Stripe secret key, PayPal client ID, payment method toggles
+- Enhanced `/subscribe/:plan` — Show all payment method options: Credit Card (Stripe), PayPal, Apple Pay, Google Pay, with method selector tabs
+- Enhanced Setup Guide — Add detailed "Background Monitoring" section explaining how the child app runs silently, battery optimization bypass, permissions required (Android/iOS), and how parents get push reports
+- New images: phone screen showing background service active, parent report notification mockup, Android permissions screen, iOS Screen Time API screen, payment methods banner
 
 ### Modify
-- Landing page pricing CTAs: "Start Free Trial" / "Get Started" buttons link to `/signup` then to `/subscribe/:plan` for paid tiers
-- Nav "Sign In" → `/login`, "Get Started Free" → `/signup`
-- Dashboard nav: add "Setup Guide" link and show current plan/upgrade button
-- Dashboard layout: show user email in top-right, add logout option
-- Settings page: add "Manage Subscription" section linking to Stripe portal
+- `LandingPage.tsx` — Wire footer Legal, Privacy, Terms, Support links to real routes; add nav link for Support
+- `SettingsPage.tsx` — Add "Payment Settings" link for admin/owner use
+- `SetupGuidePage.tsx` — Expand Step 3 (Install) with detailed background monitoring permissions sub-steps for Android and iOS; add Step 5 "Background Reports" explaining push notifications
 
 ### Remove
 - Nothing removed
 
 ## Implementation Plan
-1. Select `stripe` Caffeine component
-2. Generate updated Motoko backend with: user accounts (email/password hash, subscription tier), Stripe subscription management methods
-3. Generate images: 6 feature illustrations, 3 testimonial avatars, 2 app screenshots, setup guide phone screenshots
-4. Build frontend:
-   - `/login` page: email + password form, "Forgot password" link
-   - `/signup` page: email + password + confirm password, plan selection
-   - `/subscribe/:plan` page: Stripe checkout integration
-   - `/setup-guide` page: step-by-step Android + iOS instructions with phone mockup images
-   - Wire all generated images into landing page feature cards, testimonial section, how-it-works
-   - Dashboard: user profile in nav, logout, setup guide link, subscription status + upgrade CTA
-   - Payments: subscription plan selector, Stripe checkout button, confirmation state
+1. Generate all missing/new images (background service, permissions screenshots, payment banner, report notification)
+2. Create `/privacy` page with full COPPA-compliant privacy policy text
+3. Create `/terms` page with subscription and acceptable use terms
+4. Create `/support` page with FAQ accordion by category + contact form
+5. Create `/legal` hub page
+6. Create `/dashboard/payment-settings` page (owner payout config: Stripe key, PayPal ID, toggles for each payment method)
+7. Update `SubscribePage.tsx` to show payment method selector (Credit Card, PayPal, Apple Pay, Google Pay tabs)
+8. Update `SetupGuidePage.tsx` with detailed background monitoring steps and Android/iOS permission walkthrough
+9. Update `LandingPage.tsx` footer links and nav
+10. Update `routeTree.ts` to register all new routes
+11. Validate, typecheck, build

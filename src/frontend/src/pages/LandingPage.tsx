@@ -579,6 +579,13 @@ export default function LandingPage() {
             >
               Setup Guide
             </Link>
+            <Link
+              to="/support"
+              data-ocid="nav.support.link"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Support
+            </Link>
           </nav>
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login">
@@ -631,6 +638,22 @@ export default function LandingPage() {
                   {label}
                 </a>
               ))}
+              <Link
+                to="/setup-guide"
+                data-ocid="mobile.setup_guide.link"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Setup Guide
+              </Link>
+              <Link
+                to="/support"
+                data-ocid="mobile.support.link"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Support
+              </Link>
               <div className="flex gap-2 pt-2 border-t border-border/50">
                 <Link to="/login" className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">
@@ -1098,19 +1121,40 @@ export default function LandingPage() {
               </h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <span className="hover:text-foreground transition-colors cursor-pointer">
+                  <Link
+                    to="/privacy"
+                    className="hover:text-foreground transition-colors"
+                    data-ocid="footer.privacy.link"
+                  >
                     Privacy Policy
-                  </span>
+                  </Link>
                 </li>
                 <li>
-                  <span className="hover:text-foreground transition-colors cursor-pointer">
+                  <Link
+                    to="/terms"
+                    className="hover:text-foreground transition-colors"
+                    data-ocid="footer.terms.link"
+                  >
                     Terms of Service
-                  </span>
+                  </Link>
                 </li>
                 <li>
-                  <span className="hover:text-foreground transition-colors cursor-pointer">
+                  <Link
+                    to="/legal"
+                    className="hover:text-foreground transition-colors"
+                    data-ocid="footer.legal.link"
+                  >
+                    Legal
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/support"
+                    className="hover:text-foreground transition-colors"
+                    data-ocid="footer.support.link"
+                  >
                     Support
-                  </span>
+                  </Link>
                 </li>
               </ul>
             </div>

@@ -33,6 +33,7 @@ import {
   Clock,
   CreditCard,
   ExternalLink,
+  HelpCircle,
   Home,
   LogOut,
   MapPin,
@@ -202,6 +203,18 @@ function Sidebar({ alertCount, plan, onClose }: SidebarProps) {
       icon: <Settings size={17} />,
       label: "Settings",
       ocid: "nav.settings.link",
+    },
+    {
+      to: "/dashboard/payment-settings",
+      icon: <CreditCard size={17} />,
+      label: "Payment Settings",
+      ocid: "nav.payment_settings.link",
+    },
+    {
+      to: "/support",
+      icon: <HelpCircle size={17} />,
+      label: "Support",
+      ocid: "nav.support.link",
     },
   ];
 
