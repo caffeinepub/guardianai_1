@@ -12,9 +12,11 @@ import {
   CreditCard,
   Lock,
   MapPin,
+  Menu,
   Shield,
   Star,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -68,12 +70,13 @@ function Particles() {
   );
 }
 
-// ── Feature Card ──────────────────────────────────────────
+// ── Feature Card with image ───────────────────────────────
 interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
   color: string;
+  image: string;
   delay?: number;
 }
 
@@ -82,6 +85,7 @@ function FeatureCard({
   title,
   description,
   color,
+  image,
   delay = 0,
 }: FeatureCardProps) {
   const [visible, setVisible] = useState(false);
@@ -101,32 +105,58 @@ function FeatureCard({
   return (
     <div
       ref={ref}
-      className="group relative rounded-2xl p-6 bg-card-glass hover:border-teal transition-all duration-500 cursor-default"
+      className="group relative rounded-2xl overflow-hidden bg-card-glass hover:border-teal transition-all duration-500 cursor-default"
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(24px)",
         transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms, box-shadow 0.3s ease`,
+        border: "1px solid oklch(0.22 0.04 265)",
       }}
     >
-      {/* hover glow */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: `radial-gradient(ellipse at top left, ${color}15 0%, transparent 60%)`,
-        }}
-      />
-      <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
-        style={{ background: `${color}20`, border: `1px solid ${color}40` }}
-      >
-        <div style={{ color }}>{icon}</div>
+      {/* Feature image preview */}
+      <div className="relative h-36 overflow-hidden">
+        <img
+          src={image}
+          alt={title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+        {/* Overlay gradient */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent 40%, oklch(0.14 0.025 265))",
+          }}
+        />
+        {/* Icon overlay */}
+        <div
+          className="absolute bottom-3 left-3 w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: `${color}20`,
+            border: `1px solid ${color}40`,
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div style={{ color }}>{icon}</div>
+        </div>
+        {/* Glow on hover */}
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at top left, ${color}20 0%, transparent 60%)`,
+          }}
+        />
       </div>
-      <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
-        {title}
-      </h3>
-      <p className="text-muted-foreground text-sm leading-relaxed">
-        {description}
-      </p>
+
+      <div className="p-5">
+        <h3 className="font-heading text-base font-semibold text-foreground mb-2">
+          {title}
+        </h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          {description}
+        </p>
+      </div>
     </div>
   );
 }
@@ -181,6 +211,7 @@ interface TestimonialProps {
   text: string;
   rating: number;
   initials: string;
+  photo: string;
 }
 
 function TestimonialCard({
@@ -188,7 +219,7 @@ function TestimonialCard({
   role,
   text,
   rating,
-  initials,
+  photo,
 }: TestimonialProps) {
   return (
     <div className="rounded-2xl p-6 bg-card-glass flex flex-col gap-4">
@@ -208,14 +239,26 @@ function TestimonialCard({
         "{text}"
       </p>
       <div className="flex items-center gap-3">
+        <img
+          src={photo}
+          alt={name}
+          className="w-10 h-10 rounded-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = "none";
+            // Show fallback
+            const fallback = target.nextElementSibling as HTMLElement;
+            if (fallback) fallback.style.display = "flex";
+          }}
+        />
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold font-heading"
+          className="w-10 h-10 rounded-full items-center justify-center text-sm font-bold font-heading hidden"
           style={{
             background: "oklch(0.2 0.06 195)",
             color: "oklch(0.78 0.15 195)",
           }}
         >
-          {initials}
+          {name[0]}
         </div>
         <div>
           <div className="text-sm font-semibold text-foreground">{name}</div>
@@ -236,6 +279,7 @@ interface PricingCardProps {
   cta: string;
   highlighted?: boolean;
   badge?: string;
+  planParam?: string;
 }
 
 function PricingCard({
@@ -247,7 +291,9 @@ function PricingCard({
   cta,
   highlighted,
   badge,
+  planParam,
 }: PricingCardProps) {
+  const to = planParam ? `/signup?plan=${planParam}` : "/signup";
   return (
     <div
       data-ocid={`landing.pricing.item.${index}`}
@@ -288,15 +334,16 @@ function PricingCard({
           </li>
         ))}
       </ul>
-      <Link to="/dashboard">
+      <a href={to}>
         <Button
+          data-ocid={`landing.pricing.${index}.primary_button`}
           className={`w-full ${highlighted ? "bg-primary text-primary-foreground hover:opacity-90" : "variant-outline border-border hover:border-primary/50"}`}
           variant={highlighted ? "default" : "outline"}
         >
           {cta}
           <ArrowRight size={14} className="ml-1" />
         </Button>
-      </Link>
+      </a>
     </div>
   );
 }
@@ -341,7 +388,6 @@ function HowItWorks() {
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* connector line */}
           <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           {steps.map((step, i) => (
             <div
@@ -391,6 +437,7 @@ function HowItWorks() {
 // ── Main Landing Page ─────────────────────────────────────
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -400,46 +447,52 @@ export default function LandingPage() {
 
   const features = [
     {
-      icon: <MapPin size={22} />,
+      icon: <MapPin size={18} />,
       title: "Real-Time Location",
       description:
         "Live GPS tracking with geofencing. Receive instant alerts when your child enters or leaves designated safe zones.",
       color: "oklch(0.78 0.15 195)",
+      image: "/assets/generated/feature-location-tracking.dim_800x600.png",
     },
     {
-      icon: <Clock size={22} />,
+      icon: <Clock size={18} />,
       title: "Screen Time Analytics",
       description:
         "Detailed per-app usage reports with AI-generated insights. Understand exactly how your child spends their digital time.",
       color: "oklch(0.72 0.18 155)",
+      image: "/assets/generated/feature-screen-time.dim_800x600.png",
     },
     {
-      icon: <Shield size={22} />,
+      icon: <Shield size={18} />,
       title: "Content Guardian",
       description:
         "AI scans browsed content in real-time flagging inappropriate material with risk scores and category classification.",
       color: "oklch(0.68 0.22 310)",
+      image: "/assets/generated/feature-content-analysis.dim_800x600.png",
     },
     {
-      icon: <AlertTriangle size={22} />,
+      icon: <AlertTriangle size={18} />,
       title: "Bullying Detection",
       description:
         "ML-powered message analysis identifies cyberbullying patterns, harsh language, and threatening behavior across all platforms.",
       color: "oklch(0.75 0.22 55)",
+      image: "/assets/generated/feature-bullying-detection.dim_800x600.png",
     },
     {
-      icon: <CreditCard size={22} />,
+      icon: <CreditCard size={18} />,
       title: "Spending Monitor",
       description:
         "Track every in-app purchase, subscription, and digital transaction. Set spending limits with instant over-budget alerts.",
       color: "oklch(0.65 0.22 25)",
+      image: "/assets/generated/feature-spending-monitor.dim_800x600.png",
     },
     {
-      icon: <Brain size={22} />,
+      icon: <Brain size={18} />,
       title: "AI Parenting Coach",
       description:
         "Receive personalized weekly tips and actionable recommendations tailored to your child's unique digital behavior patterns.",
       color: "oklch(0.78 0.18 195)",
+      image: "/assets/generated/feature-ai-coach.dim_800x600.png",
     },
   ];
 
@@ -450,6 +503,7 @@ export default function LandingPage() {
       text: "GuardianAI caught signs of cyberbullying I would never have noticed on my own. The AI flagged concerning messages and gave me a script for talking to my daughter. Life-changing.",
       rating: 5,
       initials: "SM",
+      photo: "/assets/generated/testimonial-sarah.dim_200x200.png",
     },
     {
       name: "David Chen",
@@ -457,6 +511,7 @@ export default function LandingPage() {
       text: "The screen time analytics are incredibly detailed. I had no idea my son was spending 4 hours a day on gaming apps. Now we have healthy limits and he's sleeping better.",
       rating: 5,
       initials: "DC",
+      photo: "/assets/generated/testimonial-david.dim_200x200.png",
     },
     {
       name: "Maria Rodriguez",
@@ -464,6 +519,7 @@ export default function LandingPage() {
       text: "The location tracking with safe zones gives me peace of mind when my kids walk to school. I love the weekly AI coaching tips — they've transformed how I communicate with my teenagers.",
       rating: 5,
       initials: "MR",
+      photo: "/assets/generated/testimonial-maria.dim_200x200.png",
     },
   ];
 
@@ -516,10 +572,18 @@ export default function LandingPage() {
             >
               Reviews
             </a>
+            <Link
+              to="/setup-guide"
+              data-ocid="nav.setup_guide.link"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Setup Guide
+            </Link>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard">
+          <div className="hidden md:flex items-center gap-3">
+            <Link to="/login">
               <Button
+                data-ocid="landing.signin.button"
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
@@ -527,8 +591,9 @@ export default function LandingPage() {
                 Sign In
               </Button>
             </Link>
-            <Link to="/dashboard">
+            <Link to="/signup" search={{ plan: undefined }}>
               <Button
+                data-ocid="landing.get_started.primary_button"
                 size="sm"
                 className="bg-primary text-primary-foreground hover:opacity-90 shadow-glow-teal"
               >
@@ -536,7 +601,58 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
+          {/* Mobile menu toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </Button>
         </div>
+
+        {/* Mobile nav */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border/50 py-4">
+            <div className="max-w-6xl mx-auto px-6 flex flex-col gap-3">
+              {[
+                ["#features", "Features"],
+                ["#how-it-works", "How It Works"],
+                ["#pricing", "Pricing"],
+                ["#testimonials", "Reviews"],
+              ].map(([href, label]) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {label}
+                </a>
+              ))}
+              <div className="flex gap-2 pt-2 border-t border-border/50">
+                <Link to="/login" className="flex-1">
+                  <Button variant="outline" size="sm" className="w-full">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link
+                  to="/signup"
+                  search={{ plan: undefined }}
+                  className="flex-1"
+                >
+                  <Button
+                    size="sm"
+                    className="w-full bg-primary text-primary-foreground"
+                  >
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ── Hero ────────────────────────────── */}
@@ -546,7 +662,6 @@ export default function LandingPage() {
       >
         <Particles />
 
-        {/* Dramatic glow layers */}
         <div
           className="absolute -top-20 left-0 w-[700px] h-[700px] rounded-full pointer-events-none"
           style={{
@@ -561,14 +676,6 @@ export default function LandingPage() {
             background:
               "radial-gradient(circle, oklch(0.78 0.15 195 / 0.14) 0%, transparent 65%)",
             filter: "blur(50px)",
-          }}
-        />
-        {/* Subtle horizontal light beam */}
-        <div
-          className="absolute top-1/2 left-0 right-0 h-px pointer-events-none opacity-30"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent 0%, oklch(0.78 0.15 195 / 0.4) 30%, oklch(0.68 0.22 310 / 0.3) 70%, transparent 100%)",
           }}
         />
 
@@ -627,7 +734,7 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link to="/dashboard">
+                <Link to="/signup" search={{ plan: undefined }}>
                   <Button
                     data-ocid="landing.hero_cta.primary_button"
                     size="lg"
@@ -677,9 +784,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right: Hero image with layered glow pedestal */}
+            {/* Right: Hero image */}
             <div className="relative flex items-center justify-center py-8">
-              {/* Pedestal glow — bottom */}
               <div
                 className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-24 pointer-events-none"
                 style={{
@@ -688,22 +794,12 @@ export default function LandingPage() {
                   filter: "blur(20px)",
                 }}
               />
-              {/* Main atmospheric halo */}
               <div
                 className="absolute w-80 h-80 rounded-full pointer-events-none animate-glow-pulse"
                 style={{
                   background:
                     "radial-gradient(circle, oklch(0.78 0.15 195 / 0.22) 0%, oklch(0.68 0.22 310 / 0.08) 50%, transparent 70%)",
                   filter: "blur(32px)",
-                }}
-              />
-              {/* Outer violet ring glow */}
-              <div
-                className="absolute w-96 h-96 rounded-full pointer-events-none"
-                style={{
-                  background:
-                    "radial-gradient(circle, transparent 40%, oklch(0.68 0.22 310 / 0.08) 60%, transparent 70%)",
-                  filter: "blur(24px)",
                 }}
               />
               <img
@@ -715,15 +811,14 @@ export default function LandingPage() {
                     "drop-shadow(0 24px 48px oklch(0.05 0.02 265)) drop-shadow(0 0 40px oklch(0.78 0.15 195 / 0.25))",
                 }}
               />
-              {/* Floating stat pills — more prominent */}
+              {/* Floating stat pills */}
               <div
                 className="absolute top-12 -left-2 lg:-left-8 rounded-2xl px-4 py-2.5 text-xs font-semibold backdrop-blur-md flex items-center gap-2.5 z-20"
                 style={{
                   background: "oklch(0.16 0.06 155 / 0.95)",
                   border: "1px solid oklch(0.72 0.18 155 / 0.5)",
                   color: "oklch(0.88 0.18 155)",
-                  boxShadow:
-                    "0 8px 24px oklch(0.05 0.02 265 / 0.6), 0 0 12px oklch(0.72 0.18 155 / 0.2)",
+                  boxShadow: "0 8px 24px oklch(0.05 0.02 265 / 0.6)",
                 }}
               >
                 <div
@@ -731,7 +826,6 @@ export default function LandingPage() {
                   style={{ background: "oklch(0.72 0.18 155)" }}
                 />
                 <span>Safe Zone: Home</span>
-                <span className="ml-0.5 text-[10px] opacity-70">✓</span>
               </div>
               <div
                 className="absolute bottom-20 -right-2 lg:-right-8 rounded-2xl px-4 py-2.5 text-xs font-semibold backdrop-blur-md flex items-center gap-2.5 z-20"
@@ -739,22 +833,17 @@ export default function LandingPage() {
                   background: "oklch(0.16 0.06 25 / 0.95)",
                   border: "1px solid oklch(0.65 0.22 25 / 0.5)",
                   color: "oklch(0.88 0.22 25)",
-                  boxShadow:
-                    "0 8px 24px oklch(0.05 0.02 265 / 0.6), 0 0 12px oklch(0.65 0.22 25 / 0.2)",
                 }}
               >
                 <AlertTriangle size={11} />
                 <span>1 Alert Detected</span>
               </div>
-              {/* Third pill — location */}
               <div
                 className="absolute top-1/2 -right-2 lg:-right-6 rounded-2xl px-3.5 py-2 text-xs font-semibold backdrop-blur-md flex items-center gap-2 z-20"
                 style={{
                   background: "oklch(0.16 0.06 195 / 0.95)",
                   border: "1px solid oklch(0.78 0.15 195 / 0.5)",
                   color: "oklch(0.88 0.15 195)",
-                  boxShadow:
-                    "0 8px 24px oklch(0.05 0.02 265 / 0.6), 0 0 12px oklch(0.78 0.15 195 / 0.2)",
                 }}
               >
                 <MapPin size={11} />
@@ -865,6 +954,7 @@ export default function LandingPage() {
               period="/month"
               highlighted
               badge="Most Popular"
+              planParam="family"
               features={[
                 "Up to 3 children",
                 "All Basic features",
@@ -881,6 +971,7 @@ export default function LandingPage() {
               tier="Guardian Pro"
               price="$19.99"
               period="/month"
+              planParam="guardian_pro"
               features={[
                 "Unlimited children",
                 "All Family features",
@@ -925,8 +1016,9 @@ export default function LandingPage() {
               Join thousands of parents who sleep better knowing their children
               are safe. Start your free trial today.
             </p>
-            <Link to="/dashboard">
+            <Link to="/signup" search={{ plan: undefined }}>
               <Button
+                data-ocid="landing.final_cta.primary_button"
                 size="lg"
                 className="bg-primary text-primary-foreground hover:opacity-90 shadow-glow-teal text-base px-10 py-6 rounded-xl font-semibold"
               >
@@ -983,12 +1075,20 @@ export default function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#how-it-works"
+                  <Link
+                    to="/setup-guide"
                     className="hover:text-foreground transition-colors"
                   >
-                    How It Works
-                  </a>
+                    Setup Guide
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/login"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Sign In
+                  </Link>
                 </li>
               </ul>
             </div>

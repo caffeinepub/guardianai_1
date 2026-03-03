@@ -1,6 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -8,7 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router";
 import {
   AlertTriangle,
   Bell,
@@ -17,14 +34,23 @@ import {
   CreditCard,
   ExternalLink,
   Home,
+  LogOut,
   MapPin,
   Menu,
   Settings,
   Shield,
+  Smartphone,
+  Star,
+  User,
   X,
+  Zap,
 } from "lucide-react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { SubscriptionPlan } from "../../backend.d";
+import { useAuth } from "../../contexts/AuthContext";
 import {
+  useBullyingAlerts,
   useDashboardSummary,
   useSeedAndChildren,
 } from "../../hooks/useQueries";
@@ -112,10 +138,11 @@ function NavItem({
 // ── Sidebar ───────────────────────────────────────────────
 interface SidebarProps {
   alertCount: number;
+  plan: SubscriptionPlan;
   onClose?: () => void;
 }
 
-function Sidebar({ alertCount, onClose }: SidebarProps) {
+function Sidebar({ alertCount, plan, onClose }: SidebarProps) {
   const mainItems = [
     {
       to: "/dashboard",
@@ -160,6 +187,12 @@ function Sidebar({ alertCount, onClose }: SidebarProps) {
       icon: <Brain size={17} />,
       label: "AI Coach",
       ocid: "nav.recommendations.link",
+    },
+    {
+      to: "/dashboard/setup-guide",
+      icon: <Smartphone size={17} />,
+      label: "Setup Guide",
+      ocid: "nav.setup_guide.link",
     },
   ];
 
@@ -223,6 +256,44 @@ function Sidebar({ alertCount, onClose }: SidebarProps) {
         {utilityItems.map((item) => (
           <NavItem key={item.to} {...item} onClick={onClose} />
         ))}
+
+        {/* Upgrade banner for free plan */}
+        {plan === SubscriptionPlan.free && (
+          <Link
+            to="/subscribe/$plan"
+            params={{ plan: SubscriptionPlan.family }}
+            data-ocid="nav.upgrade.button"
+            className="mt-3 mx-1"
+          >
+            <div
+              className="rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:brightness-110"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(0.18 0.06 195 / 0.5), oklch(0.18 0.06 310 / 0.3))",
+                border: "1px solid oklch(0.78 0.15 195 / 0.3)",
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                <Star size={11} style={{ color: "oklch(0.78 0.18 70)" }} />
+                <span
+                  className="text-[11px] font-bold"
+                  style={{ color: "oklch(0.85 0.15 195)" }}
+                >
+                  Upgrade to Family
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Unlock AI coach, bullying detection & more
+              </p>
+              <div
+                className="text-[10px] font-bold mt-0.5"
+                style={{ color: "oklch(0.85 0.15 195)" }}
+              >
+                $9.99/mo →
+              </div>
+            </div>
+          </Link>
+        )}
       </nav>
 
       {/* Bottom */}
@@ -241,6 +312,131 @@ function Sidebar({ alertCount, onClose }: SidebarProps) {
   );
 }
 
+// ── Alert Bell Popover ─────────────────────────────────────
+function AlertBell({
+  alerts,
+  alertCount,
+}: {
+  alerts: Array<{
+    id: bigint;
+    platform: string;
+    snippet: string;
+    severity: string;
+    timestamp: bigint;
+    status: string;
+  }>;
+  alertCount: number;
+}) {
+  const recent = alerts
+    .filter((a) => {
+      const s = String(a.status);
+      return s === "new" || s === "new_";
+    })
+    .slice(0, 5);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          data-ocid="header.alerts.button"
+          variant="ghost"
+          size="icon"
+          className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
+        >
+          <Bell size={18} />
+          {alertCount > 0 && (
+            <span
+              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full animate-pulse"
+              style={{ background: "oklch(0.65 0.22 25)" }}
+            />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        data-ocid="header.alerts.popover"
+        className="w-80 p-0 bg-card border-border"
+        align="end"
+      >
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="font-heading font-semibold text-sm text-foreground">
+              Recent Alerts
+            </span>
+            {alertCount > 0 && (
+              <Badge
+                className="text-[10px] h-4 border-0"
+                style={{
+                  background: "oklch(0.65 0.22 25 / 0.25)",
+                  color: "oklch(0.65 0.22 25)",
+                }}
+              >
+                {alertCount} new
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="max-h-72 overflow-y-auto">
+          {recent.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              <Shield size={24} className="mx-auto mb-2 opacity-30" />
+              All clear! No new alerts.
+            </div>
+          ) : (
+            recent.map((alert, i) => {
+              const severityColor =
+                String(alert.severity) === "high"
+                  ? "oklch(0.65 0.22 25)"
+                  : String(alert.severity) === "medium"
+                    ? "oklch(0.78 0.18 70)"
+                    : "oklch(0.78 0.15 195)";
+              return (
+                <div
+                  key={alert.id.toString()}
+                  data-ocid={`header.alert.item.${i + 1}`}
+                  className="p-3 border-b border-border/50 last:border-0 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: severityColor }}
+                    />
+                    <span className="text-xs font-semibold text-foreground">
+                      {alert.platform}
+                    </span>
+                    <Badge
+                      className="text-[10px] h-4 border-0 ml-auto"
+                      style={{
+                        background: `${severityColor}25`,
+                        color: severityColor,
+                      }}
+                    >
+                      {String(alert.severity)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                    {alert.snippet.slice(0, 50)}...
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="p-3 border-t border-border/50">
+          <Link to="/dashboard/bullying">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground h-7"
+            >
+              View all alerts →
+            </Button>
+          </Link>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ── Header ────────────────────────────────────────────────
 interface HeaderProps {
   onMenuOpen: () => void;
@@ -249,6 +445,14 @@ interface HeaderProps {
   setSelectedChildId: (id: string) => void;
   alertCount: number;
   isLoading: boolean;
+  alerts: Array<{
+    id: bigint;
+    platform: string;
+    snippet: string;
+    severity: string;
+    timestamp: bigint;
+    status: string;
+  }>;
 }
 
 function Header({
@@ -258,7 +462,31 @@ function Header({
   setSelectedChildId,
   alertCount,
   isLoading,
+  alerts,
 }: HeaderProps) {
+  const { email, plan, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate({ to: "/login" });
+  };
+
+  const planLabel =
+    plan === SubscriptionPlan.guardian_pro
+      ? "Guardian Pro"
+      : plan === SubscriptionPlan.family
+        ? "Family"
+        : "Free";
+
+  const planColor =
+    plan === SubscriptionPlan.guardian_pro
+      ? "oklch(0.68 0.22 310)"
+      : plan === SubscriptionPlan.family
+        ? "oklch(0.78 0.15 195)"
+        : "oklch(0.58 0.04 265)";
+
   return (
     <header className="h-14 border-b border-border flex items-center px-4 gap-4 sticky top-0 z-30 bg-background/80 backdrop-blur-xl">
       <Button
@@ -327,31 +555,89 @@ function Header({
 
       <div className="flex-1" />
 
-      {/* Alerts bell */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
-      >
-        <Bell size={18} />
-        {alertCount > 0 && (
-          <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-            style={{ background: "oklch(0.65 0.22 25)" }}
-          />
-        )}
-      </Button>
+      {/* Alert bell */}
+      <AlertBell alerts={alerts} alertCount={alertCount} />
 
-      {/* User avatar */}
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer"
-        style={{
-          background: "oklch(0.2 0.06 195)",
-          color: "oklch(0.78 0.15 195)",
-        }}
-      >
-        P
-      </div>
+      {/* User avatar dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            data-ocid="header.user.button"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
+            style={{
+              background: "oklch(0.2 0.06 195)",
+              color: "oklch(0.78 0.15 195)",
+            }}
+          >
+            {email ? email[0].toUpperCase() : "P"}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          data-ocid="header.user.dropdown_menu"
+          align="end"
+          className="w-56 bg-card border-border"
+        >
+          <div className="px-3 py-2">
+            <p className="text-xs font-semibold text-foreground truncate">
+              {email ?? "Parent Account"}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: planColor }}
+              />
+              <span className="text-[10px]" style={{ color: planColor }}>
+                {planLabel} Plan
+              </span>
+            </div>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link
+              to="/dashboard/settings"
+              data-ocid="header.settings.link"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <User size={13} />
+              Account Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/dashboard/setup-guide"
+              data-ocid="header.setup_guide.link"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Smartphone size={13} />
+              Setup Guide
+            </Link>
+          </DropdownMenuItem>
+          {plan === SubscriptionPlan.free && (
+            <DropdownMenuItem asChild>
+              <Link
+                to="/subscribe/$plan"
+                params={{ plan: SubscriptionPlan.family }}
+                data-ocid="header.upgrade.link"
+                className="flex items-center gap-2 cursor-pointer"
+                style={{ color: "oklch(0.78 0.15 195)" }}
+              >
+                <Zap size={13} />
+                Upgrade Plan
+              </Link>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            data-ocid="header.logout.button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+          >
+            <LogOut size={13} />
+            Log Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 }
@@ -360,6 +646,7 @@ function Header({
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState<string>("");
+  const { plan } = useAuth();
 
   const { data: children = [], isLoading } = useSeedAndChildren();
 
@@ -375,7 +662,22 @@ export default function DashboardLayout() {
   const childId = selectedChild?.id ?? null;
 
   const { data: summary } = useDashboardSummary(childId);
+  const { data: allAlerts = [] } = useBullyingAlerts(childId);
   const alertCount = summary ? Number(summary.unreadAlertsCount) : 0;
+
+  const alertsForBell = allAlerts
+    .filter((a) => {
+      const s = String(a.status);
+      return s === "new" || s === "new_";
+    })
+    .map((a) => ({
+      id: a.id,
+      platform: a.platform,
+      snippet: a.snippet,
+      severity: String(a.severity),
+      timestamp: a.timestamp,
+      status: String(a.status),
+    }));
 
   return (
     <DashboardContext.Provider
@@ -389,7 +691,7 @@ export default function DashboardLayout() {
       <div className="flex h-screen overflow-hidden bg-background">
         {/* Desktop sidebar */}
         <aside className="hidden lg:flex w-60 shrink-0 flex-col">
-          <Sidebar alertCount={alertCount} />
+          <Sidebar alertCount={alertCount} plan={plan} />
         </aside>
 
         {/* Mobile sidebar overlay */}
@@ -404,6 +706,7 @@ export default function DashboardLayout() {
             <div className="relative z-10 w-64 flex flex-col">
               <Sidebar
                 alertCount={alertCount}
+                plan={plan}
                 onClose={() => setSidebarOpen(false)}
               />
             </div>
@@ -419,6 +722,7 @@ export default function DashboardLayout() {
             setSelectedChildId={setSelectedChildId}
             alertCount={alertCount}
             isLoading={isLoading}
+            alerts={alertsForBell}
           />
           <main className="flex-1 overflow-y-auto scrollbar-thin p-6">
             <Outlet />

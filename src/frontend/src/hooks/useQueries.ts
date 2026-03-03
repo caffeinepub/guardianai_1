@@ -216,6 +216,102 @@ export function useDeleteChild() {
   });
 }
 
+// ── Add Safe Zone ──────────────────────────────────────────
+export function useAddSafeZone() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      childId,
+      name,
+      address,
+      latitude,
+      longitude,
+      radius,
+      isActive,
+    }: {
+      childId: bigint;
+      name: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+      radius: bigint;
+      isActive: boolean;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.addSafeZone(
+        childId,
+        name,
+        address,
+        latitude,
+        longitude,
+        radius,
+        isActive,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["safe-zones"] });
+    },
+  });
+}
+
+export function useDeleteSafeZone() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("No actor");
+      return actor.deleteSafeZone(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["safe-zones"] });
+    },
+  });
+}
+
+// ── Parent Account ─────────────────────────────────────────
+export function useParentAccount() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["parent-account"],
+    queryFn: async () => {
+      if (!actor) return null;
+      try {
+        return await actor.getParentAccount();
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useSubscriptionPlan() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["subscription-plan"],
+    queryFn: async () => {
+      if (!actor) return null;
+      try {
+        return await actor.getSubscriptionPlan();
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useMarkRecommendationRead() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("No actor");
+      return actor.markRecommendationRead(id);
+    },
+  });
+}
+
 // ── Spending (from screen time data as proxy) ─────────────
 // Note: No direct getSpending endpoint, using summary data
 export type {

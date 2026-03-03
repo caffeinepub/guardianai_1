@@ -1,19 +1,20 @@
 import Map "mo:core/Map";
-import List "mo:core/List";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import Order "mo:core/Order";
 import Time "mo:core/Time";
 import Nat "mo:core/Nat";
-import Int "mo:core/Int";
-import Bool "mo:core/Bool";
 import Float "mo:core/Float";
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
-import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+import Stripe "stripe/stripe";
+import OutCall "http-outcalls/outcall";
+import MixinAuthorization "authorization/MixinAuthorization";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   // Access control
   let accessControlState = AccessControl.initState();
@@ -21,6 +22,18 @@ actor {
 
   // Types
   type ProfileId = Nat;
+  type ParentAccount = {
+    email : Text;
+    passwordHash : Text;
+    plan : SubscriptionPlan;
+    createdAt : Time.Time;
+  };
+  type SubscriptionPlan = {
+    #free;
+    #family;
+    #guardian_pro;
+  };
+
   type ChildProfile = {
     id : ProfileId;
     name : Text;
@@ -28,7 +41,7 @@ actor {
     deviceName : Text;
     avatarUrl : Text;
     createdAt : Time.Time;
-    parentId : Principal; // Added for ownership
+    parentId : Principal;
   };
 
   type LocationRecord = {
@@ -84,7 +97,7 @@ actor {
     appName : Text;
     category : Category;
     durationMinutes : Nat;
-    date : Text; // YYYY-MM-DD
+    date : Text;
   };
 
   type ContentRecord = {
@@ -111,7 +124,7 @@ actor {
   type SpendingRecord = {
     id : ProfileId;
     childId : ProfileId;
-    amount : Nat; // in cents
+    amount : Nat;
     category : Text;
     merchant : Text;
     timestamp : Time.Time;
@@ -192,6 +205,47 @@ actor {
   let recommendations = Map.empty<ProfileId, AIRecommendation>();
   let parentSettings = Map.empty<Principal, ParentSettings>();
   let userProfiles = Map.empty<Principal, UserProfile>();
+  let parentAccounts = Map.empty<Principal, ParentAccount>();
+
+  var stripeConfig : ?Stripe.StripeConfiguration = null;
+
+  // Stripe integration
+  public shared ({ caller }) func getStripeSessionStatus(sessionId : Text) : async Stripe.StripeSessionStatus {
+    await Stripe.getSessionStatus(getStripeConfig(), sessionId, transform);
+  };
+
+  public shared ({ caller }) func createCheckoutSession(items : [Stripe.ShoppingItem], successUrl : Text, cancelUrl : Text) : async Text {
+    await Stripe.createCheckoutSession(
+      getStripeConfig(),
+      caller,
+      items,
+      successUrl,
+      cancelUrl,
+      transform,
+    );
+  };
+
+  public shared ({ caller }) func setStripeConfiguration(config : Stripe.StripeConfiguration) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can do this");
+    };
+    stripeConfig := ?config;
+  };
+
+  public query func isStripeConfigured() : async Bool {
+    stripeConfig != null;
+  };
+
+  func getStripeConfig() : Stripe.StripeConfiguration {
+    switch (stripeConfig) {
+      case (null) { Runtime.trap("Stripe needs to be first configured") };
+      case (?value) { value };
+    };
+  };
+
+  public query func transform(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
+    OutCall.transform(input);
+  };
 
   // Helper functions for authorization
   private func isChildOwner(caller : Principal, childId : ProfileId) : Bool {
@@ -229,6 +283,162 @@ actor {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
+  };
+
+  ///////////////////////////////////////////////////////////////////////
+  // PARENT ACCOUNTS AND SUBSCRIPTIONS
+  ///////////////////////////////////////////////////////////////////////
+
+  public shared ({ caller }) func registerParent(email : Text, passwordHash : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can register parent accounts");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (?_) { Runtime.trap("Parent account already exists") };
+      case (null) {
+        let account : ParentAccount = {
+          email;
+          passwordHash;
+          createdAt = Time.now();
+          plan = #free;
+        };
+        parentAccounts.add(caller, account);
+      };
+    };
+  };
+
+  public shared ({ caller }) func loginParent(email : Text, passwordHash : Text) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can login");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (?account) { account.email == email and account.passwordHash == passwordHash };
+      case (null) { false };
+    };
+  };
+
+  public query ({ caller }) func getParentAccount() : async ParentAccount {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view parent accounts");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) { account };
+    };
+  };
+
+  public shared ({ caller }) func updateParentEmail(email : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update parent email");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) {
+        let updated : ParentAccount = { account with email };
+        parentAccounts.add(caller, updated);
+      };
+    };
+  };
+
+  public shared ({ caller }) func updateParentPassword(passwordHash : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update parent password");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) {
+        let updated : ParentAccount = { account with passwordHash };
+        parentAccounts.add(caller, updated);
+      };
+    };
+  };
+
+  public query ({ caller }) func getSubscriptionPlan() : async SubscriptionPlan {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view subscription plan");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) { account.plan };
+    };
+  };
+
+  public shared ({ caller }) func updateSubscriptionPlan(plan : SubscriptionPlan) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update subscription plan");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) {
+        let updated : ParentAccount = { account with plan };
+        parentAccounts.add(caller, updated);
+      };
+    };
+  };
+
+  public query ({ caller }) func isFeatureUnlocked(feature : Text) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can check feature access");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { false };
+      case (?account) {
+        switch (account.plan) {
+          case (#free) {
+            // Free plan has basic features
+            feature == "basic_monitoring" or feature == "single_child";
+          };
+          case (#family) {
+            // Family plan has more features
+            feature != "advanced_ai" and feature != "priority_support";
+          };
+          case (#guardian_pro) {
+            // Guardian Pro has all features
+            true;
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func createSubscriptionCheckoutSession(plan : SubscriptionPlan) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can create checkout sessions");
+    };
+    let items : [Stripe.ShoppingItem] = [{
+      productName = switch (plan) {
+        case (#free) { "Free" };
+        case (#family) { "Family" };
+        case (#guardian_pro) { "Guardian Pro" };
+      };
+      productDescription = switch (plan) {
+        case (#free) { "Free Plan" };
+        case (#family) { "Family Plan - $9.99/mo" };
+        case (#guardian_pro) { "Guardian Pro Plan - $19.99/mo" };
+      };
+      currency = "usd";
+      priceInCents = switch (plan) {
+        case (#free) { 0 };
+        case (#family) { 999 };
+        case (#guardian_pro) { 1999 };
+      };
+      quantity = 1;
+    }];
+
+    await Stripe.createCheckoutSession(getStripeConfig(), caller, items, "https://guardianai.com/success", "https://guardianai.com/cancel", transform);
+  };
+
+  public shared ({ caller }) func handleStripeWebhook(sessionId : Text, plan : SubscriptionPlan) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can handle webhooks");
+    };
+    switch (parentAccounts.get(caller)) {
+      case (null) { Runtime.trap("Parent account not found") };
+      case (?account) {
+        let updated : ParentAccount = { account with plan };
+        parentAccounts.add(caller, updated);
+      };
+    };
   };
 
   // CRUD for ChildProfile

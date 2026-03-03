@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { AuthProvider } from "./contexts/AuthContext";
 import { routeTree } from "./routeTree";
 
 const router = createRouter({ routeTree });
@@ -12,7 +13,7 @@ declare module "@tanstack/react-router" {
 
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <RouterProvider router={router} />
       <Toaster
         theme="dark"
@@ -24,6 +25,6 @@ export default function App() {
           },
         }}
       />
-    </>
+    </AuthProvider>
   );
 }

@@ -13,6 +13,52 @@ export interface ParentSettings {
     weeklyReportEnabled: boolean;
     parentId: Principal;
 }
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export type Time = bigint;
+export interface ScreenTimeRecord {
+    id: ProfileId;
+    appName: string;
+    date: string;
+    childId: ProfileId;
+    durationMinutes: bigint;
+    category: Category;
+}
+export type ProfileId = bigint;
+export interface ParentAccount {
+    createdAt: Time;
+    plan: SubscriptionPlan;
+    email: string;
+    passwordHash: string;
+}
+export interface DashboardSummary {
+    todayScreenTime: bigint;
+    todaySpendingTotal: bigint;
+    latestLocation?: LocationRecord;
+    unreadAlertsCount: bigint;
+    unreadRecommendationsCount: bigint;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface ChildProfile {
+    id: ProfileId;
+    age: bigint;
+    name: string;
+    createdAt: Time;
+    avatarUrl: string;
+    deviceName: string;
+    parentId: Principal;
+}
 export interface LocationRecord {
     id: ProfileId;
     latitude: number;
@@ -21,7 +67,17 @@ export interface LocationRecord {
     address: string;
     timestamp: Time;
 }
-export type Time = bigint;
+export interface ShoppingItem {
+    productName: string;
+    currency: string;
+    quantity: bigint;
+    priceInCents: bigint;
+    productDescription: string;
+}
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
 export interface SafeZone {
     id: ProfileId;
     latitude: number;
@@ -32,15 +88,22 @@ export interface SafeZone {
     address: string;
     radius: bigint;
 }
-export interface ScreenTimeRecord {
-    id: ProfileId;
-    appName: string;
-    date: string;
-    childId: ProfileId;
-    durationMinutes: bigint;
-    category: Category;
+export type StripeSessionStatus = {
+    __kind__: "completed";
+    completed: {
+        userPrincipal?: string;
+        response: string;
+    };
+} | {
+    __kind__: "failed";
+    failed: {
+        error: string;
+    };
+};
+export interface StripeConfiguration {
+    allowedCountries: Array<string>;
+    secretKey: string;
 }
-export type ProfileId = bigint;
 export interface BullyingAlert {
     id: ProfileId;
     status: Variant_new_reviewed_dismissed;
@@ -50,24 +113,8 @@ export interface BullyingAlert {
     timestamp: Time;
     severity: Variant_low_high_medium;
 }
-export interface DashboardSummary {
-    todayScreenTime: bigint;
-    todaySpendingTotal: bigint;
-    latestLocation?: LocationRecord;
-    unreadAlertsCount: bigint;
-    unreadRecommendationsCount: bigint;
-}
 export interface UserProfile {
     name: string;
-}
-export interface ChildProfile {
-    id: ProfileId;
-    age: bigint;
-    name: string;
-    createdAt: Time;
-    avatarUrl: string;
-    deviceName: string;
-    parentId: Principal;
 }
 export enum Category {
     social = "social",
@@ -82,6 +129,11 @@ export enum Recommendation {
     screen_time = "screen_time",
     social = "social",
     financial = "financial"
+}
+export enum SubscriptionPlan {
+    free = "free",
+    guardian_pro = "guardian_pro",
+    family = "family"
 }
 export enum UserRole {
     admin = "admin",
@@ -108,6 +160,8 @@ export interface backendInterface {
     addScreenTime(childId: ProfileId, appName: string, category: Category, durationMinutes: bigint, date: string): Promise<ProfileId>;
     addSpending(childId: ProfileId, amount: bigint, category: string, merchant: string): Promise<ProfileId>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createCheckoutSession(items: Array<ShoppingItem>, successUrl: string, cancelUrl: string): Promise<string>;
+    createSubscriptionCheckoutSession(plan: SubscriptionPlan): Promise<string>;
     deleteChild(id: ProfileId): Promise<void>;
     deleteSafeZone(id: ProfileId): Promise<void>;
     getAlertsByChild(childId: ProfileId): Promise<Array<BullyingAlert>>;
@@ -118,16 +172,29 @@ export interface backendInterface {
     getDashboardSummary(childId: ProfileId): Promise<DashboardSummary>;
     getLatestLocation(childId: ProfileId): Promise<LocationRecord | null>;
     getLocationHistory(childId: ProfileId): Promise<Array<LocationRecord>>;
+    getParentAccount(): Promise<ParentAccount>;
     getSafeZones(childId: ProfileId): Promise<Array<SafeZone>>;
     getScreenTimeByDate(childId: ProfileId, date: string): Promise<Array<ScreenTimeRecord>>;
     getSettings(): Promise<ParentSettings>;
+    getStripeSessionStatus(sessionId: string): Promise<StripeSessionStatus>;
+    getSubscriptionPlan(): Promise<SubscriptionPlan>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    handleStripeWebhook(sessionId: string, plan: SubscriptionPlan): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
+    isFeatureUnlocked(feature: string): Promise<boolean>;
+    isStripeConfigured(): Promise<boolean>;
+    loginParent(email: string, passwordHash: string): Promise<boolean>;
     markRecommendationRead(id: ProfileId): Promise<void>;
+    registerParent(email: string, passwordHash: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     seedDemoData(): Promise<void>;
+    setStripeConfiguration(config: StripeConfiguration): Promise<void>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
     updateAlertStatus(id: ProfileId, status: Variant_new_reviewed_dismissed): Promise<void>;
     updateChild(id: ProfileId, name: string, age: bigint, deviceName: string, avatarUrl: string): Promise<void>;
+    updateParentEmail(email: string): Promise<void>;
+    updateParentPassword(passwordHash: string): Promise<void>;
     updateSafeZone(id: ProfileId, name: string, address: string, latitude: number, longitude: number, radius: bigint, isActive: boolean): Promise<void>;
     updateSettings(notificationsEnabled: boolean, weeklyReportEnabled: boolean, alertThreshold: Variant_low_high_medium): Promise<void>;
+    updateSubscriptionPlan(plan: SubscriptionPlan): Promise<void>;
 }

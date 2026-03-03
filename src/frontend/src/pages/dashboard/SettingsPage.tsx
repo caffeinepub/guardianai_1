@@ -18,20 +18,26 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Link } from "@tanstack/react-router";
 import {
   Bell,
   Check,
+  CreditCard,
   Edit2,
   FileText,
   Loader2,
   Plus,
   Settings,
   Shield,
+  Smartphone,
+  Star,
   Trash2,
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SubscriptionPlan } from "../../backend.d";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   Variant_low_high_medium,
   useAddChild,
@@ -140,6 +146,7 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const addChild = useAddChild();
   const deleteChild = useDeleteChild();
+  const { email, plan } = useAuth();
 
   // Add child form
   const [addOpen, setAddOpen] = useState(false);
@@ -152,6 +159,10 @@ export default function SettingsPage() {
   const [weeklyReport, setWeeklyReport] = useState(true);
   const [threshold, setThreshold] = useState<string>("medium");
   const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // Account edit state
+  const [editEmailOpen, setEditEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState(email ?? "");
 
   useEffect(() => {
     if (settings) {
@@ -214,6 +225,20 @@ export default function SettingsPage() {
     }
   };
 
+  const planLabel =
+    plan === SubscriptionPlan.guardian_pro
+      ? "Guardian Pro"
+      : plan === SubscriptionPlan.family
+        ? "Family"
+        : "Free";
+
+  const planColor =
+    plan === SubscriptionPlan.guardian_pro
+      ? "oklch(0.68 0.22 310)"
+      : plan === SubscriptionPlan.family
+        ? "oklch(0.78 0.15 195)"
+        : "oklch(0.58 0.04 265)";
+
   return (
     <div data-ocid="settings.page" className="flex flex-col gap-6 max-w-3xl">
       <div>
@@ -221,8 +246,171 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage child profiles and notification preferences
+          Manage your account, children profiles, and notification preferences
         </p>
+      </div>
+
+      {/* Account Section */}
+      <div className="rounded-2xl p-5 bg-card border border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <User size={16} className="text-primary" />
+          <h2 className="font-heading font-semibold text-sm text-foreground">
+            Account
+          </h2>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/40">
+            <div>
+              <div className="text-sm font-medium text-foreground">
+                Email Address
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {email ?? "Not set"}
+              </div>
+            </div>
+            <Button
+              data-ocid="settings.edit_email.button"
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1"
+              onClick={() => {
+                setNewEmail(email ?? "");
+                setEditEmailOpen(true);
+              }}
+            >
+              <Edit2 size={11} />
+              Edit
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/40">
+            <div>
+              <div className="text-sm font-medium text-foreground">
+                Password
+              </div>
+              <div className="text-xs text-muted-foreground">••••••••</div>
+            </div>
+            <Button
+              data-ocid="settings.change_password.button"
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1"
+              onClick={() => toast.info("Password change coming soon")}
+            >
+              <Edit2 size={11} />
+              Change
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Section */}
+      <div className="rounded-2xl p-5 bg-card border border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <CreditCard size={16} className="text-primary" />
+          <h2 className="font-heading font-semibold text-sm text-foreground">
+            Subscription
+          </h2>
+        </div>
+        <div
+          className="flex items-center justify-between p-4 rounded-xl"
+          style={{
+            background: `${planColor}10`,
+            border: `1px solid ${planColor}25`,
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: `${planColor}20`, color: planColor }}
+            >
+              <Star size={16} />
+            </div>
+            <div>
+              <div className="font-heading font-semibold text-sm text-foreground">
+                {planLabel} Plan
+              </div>
+              <div className="text-xs" style={{ color: planColor }}>
+                {plan === SubscriptionPlan.free
+                  ? "Free forever"
+                  : plan === SubscriptionPlan.family
+                    ? "$9.99/month"
+                    : "$19.99/month"}
+              </div>
+            </div>
+          </div>
+          {plan === SubscriptionPlan.free ? (
+            <Link
+              to="/subscribe/$plan"
+              params={{ plan: SubscriptionPlan.family }}
+            >
+              <Button
+                data-ocid="settings.upgrade.button"
+                size="sm"
+                className="bg-primary text-primary-foreground hover:opacity-90 h-8 text-xs"
+              >
+                Upgrade Plan
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              data-ocid="settings.manage_billing.button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs border-border/60"
+              onClick={() => toast.info("Billing portal coming soon")}
+            >
+              Manage Billing
+            </Button>
+          )}
+        </div>
+        {plan === SubscriptionPlan.free && (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Link
+              to="/subscribe/$plan"
+              params={{ plan: SubscriptionPlan.family }}
+            >
+              <div
+                className="rounded-xl p-3 flex flex-col gap-1 cursor-pointer hover:brightness-110 transition-all"
+                style={{
+                  background: "oklch(0.16 0.04 195 / 0.3)",
+                  border: "1px solid oklch(0.78 0.15 195 / 0.3)",
+                }}
+              >
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: "oklch(0.85 0.15 195)" }}
+                >
+                  Family — $9.99/mo
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  AI analysis, bullying detection
+                </span>
+              </div>
+            </Link>
+            <Link
+              to="/subscribe/$plan"
+              params={{ plan: SubscriptionPlan.guardian_pro }}
+            >
+              <div
+                className="rounded-xl p-3 flex flex-col gap-1 cursor-pointer hover:brightness-110 transition-all"
+                style={{
+                  background: "oklch(0.16 0.04 310 / 0.3)",
+                  border: "1px solid oklch(0.68 0.22 310 / 0.3)",
+                }}
+              >
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: "oklch(0.78 0.22 310)" }}
+                >
+                  Guardian Pro — $19.99/mo
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  Unlimited children, priority AI
+                </span>
+              </div>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Child Profiles */}
@@ -234,15 +422,28 @@ export default function SettingsPage() {
               Child Profiles
             </h2>
           </div>
-          <Button
-            data-ocid="settings.add_child.button"
-            size="sm"
-            className="h-8 text-xs gap-1 bg-primary text-primary-foreground hover:opacity-90"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus size={12} />
-            Add Child
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/dashboard/setup-guide">
+              <Button
+                data-ocid="settings.setup_guide.button"
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs gap-1 text-muted-foreground"
+              >
+                <Smartphone size={12} />
+                Setup Guide
+              </Button>
+            </Link>
+            <Button
+              data-ocid="settings.add_child.button"
+              size="sm"
+              className="h-8 text-xs gap-1 bg-primary text-primary-foreground hover:opacity-90"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus size={12} />
+              Add Child
+            </Button>
+          </div>
         </div>
 
         {childrenLoading ? (
@@ -263,6 +464,14 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">
               No children added yet
             </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3 text-xs"
+              onClick={() => setAddOpen(true)}
+            >
+              Add Your First Child
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -337,7 +546,6 @@ export default function SettingsPage() {
             Alert Sensitivity
           </h2>
         </div>
-
         <div className="flex flex-col gap-3">
           <div>
             <Label
@@ -387,7 +595,7 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      {/* Footer */}
+      {/* About */}
       <div className="rounded-2xl p-5 bg-card border border-border">
         <div className="flex items-center gap-2 mb-3">
           <FileText size={16} className="text-muted-foreground" />
@@ -502,6 +710,58 @@ export default function SettingsPage() {
                 <Loader2 size={14} className="animate-spin" />
               )}
               Add Child
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Email Dialog */}
+      <Dialog open={editEmailOpen} onOpenChange={setEditEmailOpen}>
+        <DialogContent
+          data-ocid="settings.edit_email.dialog"
+          className="bg-card border-border max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-heading">Change Email</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="new-email"
+                className="text-xs text-muted-foreground"
+              >
+                New Email Address
+              </Label>
+              <Input
+                id="new-email"
+                data-ocid="settings.edit_email.input"
+                type="email"
+                placeholder="new@example.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="bg-secondary border-border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              data-ocid="settings.edit_email.cancel_button"
+              variant="ghost"
+              onClick={() => setEditEmailOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              data-ocid="settings.edit_email.submit_button"
+              className="bg-primary text-primary-foreground hover:opacity-90"
+              onClick={() => {
+                toast.success(
+                  "Email update coming soon (requires backend auth)",
+                );
+                setEditEmailOpen(false);
+              }}
+            >
+              Save Email
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -52,6 +52,12 @@ export interface LocationRecord {
   'address' : string,
   'timestamp' : Time,
 }
+export interface ParentAccount {
+  'createdAt' : Time,
+  'plan' : SubscriptionPlan,
+  'email' : string,
+  'passwordHash' : string,
+}
 export interface ParentSettings {
   'notificationsEnabled' : boolean,
   'alertThreshold' : { 'low' : null } |
@@ -84,11 +90,44 @@ export interface ScreenTimeRecord {
   'durationMinutes' : bigint,
   'category' : Category,
 }
+export interface ShoppingItem {
+  'productName' : string,
+  'currency' : string,
+  'quantity' : bigint,
+  'priceInCents' : bigint,
+  'productDescription' : string,
+}
+export interface StripeConfiguration {
+  'allowedCountries' : Array<string>,
+  'secretKey' : string,
+}
+export type StripeSessionStatus = {
+    'completed' : { 'userPrincipal' : [] | [string], 'response' : string }
+  } |
+  { 'failed' : { 'error' : string } };
+export type SubscriptionPlan = { 'free' : null } |
+  { 'guardian_pro' : null } |
+  { 'family' : null };
 export type Time = bigint;
+export interface TransformationInput {
+  'context' : Uint8Array,
+  'response' : http_request_result,
+}
+export interface TransformationOutput {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface http_header { 'value' : string, 'name' : string }
+export interface http_request_result {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addBullyingAlert' : ActorMethod<
@@ -122,6 +161,11 @@ export interface _SERVICE {
   >,
   'addSpending' : ActorMethod<[ProfileId, bigint, string, string], ProfileId>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createCheckoutSession' : ActorMethod<
+    [Array<ShoppingItem>, string, string],
+    string
+  >,
+  'createSubscriptionCheckoutSession' : ActorMethod<[SubscriptionPlan], string>,
   'deleteChild' : ActorMethod<[ProfileId], undefined>,
   'deleteSafeZone' : ActorMethod<[ProfileId], undefined>,
   'getAlertsByChild' : ActorMethod<[ProfileId], Array<BullyingAlert>>,
@@ -132,17 +176,27 @@ export interface _SERVICE {
   'getDashboardSummary' : ActorMethod<[ProfileId], DashboardSummary>,
   'getLatestLocation' : ActorMethod<[ProfileId], [] | [LocationRecord]>,
   'getLocationHistory' : ActorMethod<[ProfileId], Array<LocationRecord>>,
+  'getParentAccount' : ActorMethod<[], ParentAccount>,
   'getSafeZones' : ActorMethod<[ProfileId], Array<SafeZone>>,
   'getScreenTimeByDate' : ActorMethod<
     [ProfileId, string],
     Array<ScreenTimeRecord>
   >,
   'getSettings' : ActorMethod<[], ParentSettings>,
+  'getStripeSessionStatus' : ActorMethod<[string], StripeSessionStatus>,
+  'getSubscriptionPlan' : ActorMethod<[], SubscriptionPlan>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'handleStripeWebhook' : ActorMethod<[string, SubscriptionPlan], undefined>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isFeatureUnlocked' : ActorMethod<[string], boolean>,
+  'isStripeConfigured' : ActorMethod<[], boolean>,
+  'loginParent' : ActorMethod<[string, string], boolean>,
   'markRecommendationRead' : ActorMethod<[ProfileId], undefined>,
+  'registerParent' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'seedDemoData' : ActorMethod<[], undefined>,
+  'setStripeConfiguration' : ActorMethod<[StripeConfiguration], undefined>,
+  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'updateAlertStatus' : ActorMethod<
     [
       ProfileId,
@@ -156,6 +210,8 @@ export interface _SERVICE {
     [ProfileId, string, bigint, string, string],
     undefined
   >,
+  'updateParentEmail' : ActorMethod<[string], undefined>,
+  'updateParentPassword' : ActorMethod<[string], undefined>,
   'updateSafeZone' : ActorMethod<
     [ProfileId, string, string, number, number, bigint, boolean],
     undefined
@@ -170,6 +226,7 @@ export interface _SERVICE {
     ],
     undefined
   >,
+  'updateSubscriptionPlan' : ActorMethod<[SubscriptionPlan], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

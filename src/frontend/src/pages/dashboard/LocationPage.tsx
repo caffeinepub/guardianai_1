@@ -1,10 +1,30 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Clock, MapPin, Navigation, Plus, Shield } from "lucide-react";
-import { useState } from "react";
 import {
+  Clock,
+  Loader2,
+  MapPin,
+  Navigation,
+  Plus,
+  Shield,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  useAddSafeZone,
+  useDeleteSafeZone,
   useLatestLocation,
   useLocationHistory,
   useSafeZones,
@@ -16,7 +36,6 @@ function LocationMapVisual({
   lat,
   lng,
 }: { address: string; lat: number; lng: number }) {
-  // Stylized pseudo-map using CSS grid patterns
   return (
     <div
       className="relative rounded-2xl overflow-hidden h-48"
@@ -25,18 +44,15 @@ function LocationMapVisual({
         border: "1px solid oklch(0.25 0.04 265)",
       }}
     >
-      {/* Grid lines to simulate map */}
+      {/* Grid lines */}
       <div
         className="absolute inset-0 opacity-20"
         style={{
-          backgroundImage: `
-          linear-gradient(oklch(0.78 0.15 195 / 0.4) 1px, transparent 1px),
-          linear-gradient(90deg, oklch(0.78 0.15 195 / 0.4) 1px, transparent 1px)
-        `,
+          backgroundImage:
+            "linear-gradient(oklch(0.78 0.15 195 / 0.4) 1px, transparent 1px), linear-gradient(90deg, oklch(0.78 0.15 195 / 0.4) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
-
       {/* Road lines */}
       <div className="absolute inset-0">
         <div
@@ -52,10 +68,8 @@ function LocationMapVisual({
           style={{ background: "oklch(0.18 0.03 220)", opacity: 0.8 }}
         />
       </div>
-
       {/* Location pin */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 z-10">
-        {/* Pulse ring */}
         <div className="relative">
           <div
             className="w-12 h-12 rounded-full animate-pulse-ring absolute -inset-2"
@@ -72,7 +86,6 @@ function LocationMapVisual({
           </div>
         </div>
       </div>
-
       {/* Coordinate badge */}
       <div
         className="absolute bottom-3 left-3 rounded-lg px-3 py-1.5 text-xs font-mono backdrop-blur-sm"
@@ -84,7 +97,6 @@ function LocationMapVisual({
       >
         {lat.toFixed(4)}, {lng.toFixed(4)}
       </div>
-
       {/* Live badge */}
       <div
         className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
@@ -105,6 +117,7 @@ function LocationMapVisual({
 function SafeZoneItem({
   zone,
   index,
+  onDelete,
 }: {
   zone: {
     id: bigint;
@@ -114,8 +127,10 @@ function SafeZoneItem({
     radius: bigint;
   };
   index: number;
+  onDelete: (id: bigint) => void;
 }) {
   const [active, setActive] = useState(zone.isActive);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <div
@@ -155,11 +170,47 @@ function SafeZoneItem({
           {Number(zone.radius)}m radius
         </p>
       </div>
-      <Switch
-        data-ocid={`location.safe_zone.toggle.${index}`}
-        checked={active}
-        onCheckedChange={setActive}
-      />
+      <div className="flex items-center gap-2 shrink-0">
+        <Switch
+          data-ocid={`location.safe_zone.toggle.${index}`}
+          checked={active}
+          onCheckedChange={setActive}
+        />
+        {confirmDelete ? (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-muted-foreground"
+              onClick={() => setConfirmDelete(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              data-ocid={`location.safe_zone.delete_button.${index}`}
+              size="sm"
+              className="h-7 text-xs"
+              style={{
+                background: "oklch(0.65 0.22 25)",
+                color: "oklch(0.98 0 0)",
+              }}
+              onClick={() => onDelete(zone.id)}
+            >
+              Delete
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={() => setConfirmDelete(true)}
+            data-ocid={`location.safe_zone.open_modal_button.${index}`}
+          >
+            <Trash2 size={13} />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -220,6 +271,49 @@ export default function LocationPage() {
     useLocationHistory(childId);
   const { data: safeZones = [], isLoading: zonesLoading } =
     useSafeZones(childId);
+  const addSafeZone = useAddSafeZone();
+  const deleteSafeZone = useDeleteSafeZone();
+
+  const [addZoneOpen, setAddZoneOpen] = useState(false);
+  const [zoneName, setZoneName] = useState("");
+  const [zoneAddress, setZoneAddress] = useState("");
+
+  const handleAddZone = async () => {
+    if (!childId) {
+      toast.error("No child selected");
+      return;
+    }
+    if (!zoneName.trim() || !zoneAddress.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      await addSafeZone.mutateAsync({
+        childId,
+        name: zoneName.trim(),
+        address: zoneAddress.trim(),
+        latitude: 37.7749 + Math.random() * 0.1,
+        longitude: -122.4194 + Math.random() * 0.1,
+        radius: BigInt(500),
+        isActive: true,
+      });
+      toast.success(`Safe zone "${zoneName}" added`);
+      setAddZoneOpen(false);
+      setZoneName("");
+      setZoneAddress("");
+    } catch {
+      toast.error("Failed to add safe zone");
+    }
+  };
+
+  const handleDeleteZone = async (id: bigint) => {
+    try {
+      await deleteSafeZone.mutateAsync(id);
+      toast.success("Safe zone removed");
+    } catch {
+      toast.error("Failed to remove safe zone");
+    }
+  };
 
   return (
     <div data-ocid="location.page" className="flex flex-col gap-6 max-w-5xl">
@@ -307,6 +401,7 @@ export default function LocationPage() {
               size="sm"
               variant="outline"
               className="h-7 text-xs gap-1 border-border/60"
+              onClick={() => setAddZoneOpen(true)}
             >
               <Plus size={12} />
               Add Zone
@@ -339,6 +434,7 @@ export default function LocationPage() {
                   key={zone.id.toString()}
                   zone={zone}
                   index={i + 1}
+                  onDelete={handleDeleteZone}
                 />
               ))}
             </div>
@@ -391,6 +487,71 @@ export default function LocationPage() {
           </div>
         )}
       </div>
+
+      {/* Add Safe Zone Dialog */}
+      <Dialog open={addZoneOpen} onOpenChange={setAddZoneOpen}>
+        <DialogContent
+          data-ocid="location.add_zone.dialog"
+          className="bg-card border-border max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-heading">Add Safe Zone</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="zone-name"
+                className="text-xs text-muted-foreground"
+              >
+                Zone Name
+              </Label>
+              <Input
+                id="zone-name"
+                data-ocid="location.add_zone.input"
+                placeholder="e.g. Home, School"
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="zone-address"
+                className="text-xs text-muted-foreground"
+              >
+                Address
+              </Label>
+              <Input
+                id="zone-address"
+                placeholder="e.g. 123 Main St, City"
+                value={zoneAddress}
+                onChange={(e) => setZoneAddress(e.target.value)}
+                className="bg-secondary border-border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              data-ocid="location.add_zone.cancel_button"
+              variant="ghost"
+              onClick={() => setAddZoneOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              data-ocid="location.add_zone.submit_button"
+              className="bg-primary text-primary-foreground hover:opacity-90 gap-2"
+              onClick={handleAddZone}
+              disabled={addSafeZone.isPending}
+            >
+              {addSafeZone.isPending && (
+                <Loader2 size={14} className="animate-spin" />
+              )}
+              Add Zone
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

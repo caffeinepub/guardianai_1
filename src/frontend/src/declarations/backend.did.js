@@ -28,6 +28,18 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const ShoppingItem = IDL.Record({
+  'productName' : IDL.Text,
+  'currency' : IDL.Text,
+  'quantity' : IDL.Nat,
+  'priceInCents' : IDL.Nat,
+  'productDescription' : IDL.Text,
+});
+export const SubscriptionPlan = IDL.Variant({
+  'free' : IDL.Null,
+  'guardian_pro' : IDL.Null,
+  'family' : IDL.Null,
+});
 export const Time = IDL.Int;
 export const BullyingAlert = IDL.Record({
   'id' : ProfileId,
@@ -71,6 +83,12 @@ export const DashboardSummary = IDL.Record({
   'unreadAlertsCount' : IDL.Nat,
   'unreadRecommendationsCount' : IDL.Nat,
 });
+export const ParentAccount = IDL.Record({
+  'createdAt' : Time,
+  'plan' : SubscriptionPlan,
+  'email' : IDL.Text,
+  'passwordHash' : IDL.Text,
+});
 export const SafeZone = IDL.Record({
   'id' : ProfileId,
   'latitude' : IDL.Float64,
@@ -98,6 +116,35 @@ export const ParentSettings = IDL.Record({
   }),
   'weeklyReportEnabled' : IDL.Bool,
   'parentId' : IDL.Principal,
+});
+export const StripeSessionStatus = IDL.Variant({
+  'completed' : IDL.Record({
+    'userPrincipal' : IDL.Opt(IDL.Text),
+    'response' : IDL.Text,
+  }),
+  'failed' : IDL.Record({ 'error' : IDL.Text }),
+});
+export const StripeConfiguration = IDL.Record({
+  'allowedCountries' : IDL.Vec(IDL.Text),
+  'secretKey' : IDL.Text,
+});
+export const http_header = IDL.Record({
+  'value' : IDL.Text,
+  'name' : IDL.Text,
+});
+export const http_request_result = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
+export const TransformationInput = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : http_request_result,
+});
+export const TransformationOutput = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
 });
 
 export const idlService = IDL.Service({
@@ -160,6 +207,16 @@ export const idlService = IDL.Service({
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createCheckoutSession' : IDL.Func(
+      [IDL.Vec(ShoppingItem), IDL.Text, IDL.Text],
+      [IDL.Text],
+      [],
+    ),
+  'createSubscriptionCheckoutSession' : IDL.Func(
+      [SubscriptionPlan],
+      [IDL.Text],
+      [],
+    ),
   'deleteChild' : IDL.Func([ProfileId], [], []),
   'deleteSafeZone' : IDL.Func([ProfileId], [], []),
   'getAlertsByChild' : IDL.Func(
@@ -182,6 +239,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(LocationRecord)],
       ['query'],
     ),
+  'getParentAccount' : IDL.Func([], [ParentAccount], ['query']),
   'getSafeZones' : IDL.Func([ProfileId], [IDL.Vec(SafeZone)], ['query']),
   'getScreenTimeByDate' : IDL.Func(
       [ProfileId, IDL.Text],
@@ -189,15 +247,28 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getSettings' : IDL.Func([], [ParentSettings], ['query']),
+  'getStripeSessionStatus' : IDL.Func([IDL.Text], [StripeSessionStatus], []),
+  'getSubscriptionPlan' : IDL.Func([], [SubscriptionPlan], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'handleStripeWebhook' : IDL.Func([IDL.Text, SubscriptionPlan], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isFeatureUnlocked' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+  'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
+  'loginParent' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
   'markRecommendationRead' : IDL.Func([ProfileId], [], []),
+  'registerParent' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'seedDemoData' : IDL.Func([], [], []),
+  'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
+  'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
   'updateAlertStatus' : IDL.Func(
       [
         ProfileId,
@@ -215,6 +286,8 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'updateParentEmail' : IDL.Func([IDL.Text], [], []),
+  'updateParentPassword' : IDL.Func([IDL.Text], [], []),
   'updateSafeZone' : IDL.Func(
       [
         ProfileId,
@@ -241,6 +314,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'updateSubscriptionPlan' : IDL.Func([SubscriptionPlan], [], []),
 });
 
 export const idlInitArgs = [];
@@ -265,6 +339,18 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const ShoppingItem = IDL.Record({
+    'productName' : IDL.Text,
+    'currency' : IDL.Text,
+    'quantity' : IDL.Nat,
+    'priceInCents' : IDL.Nat,
+    'productDescription' : IDL.Text,
+  });
+  const SubscriptionPlan = IDL.Variant({
+    'free' : IDL.Null,
+    'guardian_pro' : IDL.Null,
+    'family' : IDL.Null,
   });
   const Time = IDL.Int;
   const BullyingAlert = IDL.Record({
@@ -309,6 +395,12 @@ export const idlFactory = ({ IDL }) => {
     'unreadAlertsCount' : IDL.Nat,
     'unreadRecommendationsCount' : IDL.Nat,
   });
+  const ParentAccount = IDL.Record({
+    'createdAt' : Time,
+    'plan' : SubscriptionPlan,
+    'email' : IDL.Text,
+    'passwordHash' : IDL.Text,
+  });
   const SafeZone = IDL.Record({
     'id' : ProfileId,
     'latitude' : IDL.Float64,
@@ -336,6 +428,32 @@ export const idlFactory = ({ IDL }) => {
     }),
     'weeklyReportEnabled' : IDL.Bool,
     'parentId' : IDL.Principal,
+  });
+  const StripeSessionStatus = IDL.Variant({
+    'completed' : IDL.Record({
+      'userPrincipal' : IDL.Opt(IDL.Text),
+      'response' : IDL.Text,
+    }),
+    'failed' : IDL.Record({ 'error' : IDL.Text }),
+  });
+  const StripeConfiguration = IDL.Record({
+    'allowedCountries' : IDL.Vec(IDL.Text),
+    'secretKey' : IDL.Text,
+  });
+  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const http_request_result = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
+  const TransformationInput = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : http_request_result,
+  });
+  const TransformationOutput = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
   });
   
   return IDL.Service({
@@ -398,6 +516,16 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createCheckoutSession' : IDL.Func(
+        [IDL.Vec(ShoppingItem), IDL.Text, IDL.Text],
+        [IDL.Text],
+        [],
+      ),
+    'createSubscriptionCheckoutSession' : IDL.Func(
+        [SubscriptionPlan],
+        [IDL.Text],
+        [],
+      ),
     'deleteChild' : IDL.Func([ProfileId], [], []),
     'deleteSafeZone' : IDL.Func([ProfileId], [], []),
     'getAlertsByChild' : IDL.Func(
@@ -424,6 +552,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(LocationRecord)],
         ['query'],
       ),
+    'getParentAccount' : IDL.Func([], [ParentAccount], ['query']),
     'getSafeZones' : IDL.Func([ProfileId], [IDL.Vec(SafeZone)], ['query']),
     'getScreenTimeByDate' : IDL.Func(
         [ProfileId, IDL.Text],
@@ -431,15 +560,28 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getSettings' : IDL.Func([], [ParentSettings], ['query']),
+    'getStripeSessionStatus' : IDL.Func([IDL.Text], [StripeSessionStatus], []),
+    'getSubscriptionPlan' : IDL.Func([], [SubscriptionPlan], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'handleStripeWebhook' : IDL.Func([IDL.Text, SubscriptionPlan], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isFeatureUnlocked' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+    'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
+    'loginParent' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     'markRecommendationRead' : IDL.Func([ProfileId], [], []),
+    'registerParent' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'seedDemoData' : IDL.Func([], [], []),
+    'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
+    'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
     'updateAlertStatus' : IDL.Func(
         [
           ProfileId,
@@ -457,6 +599,8 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'updateParentEmail' : IDL.Func([IDL.Text], [], []),
+    'updateParentPassword' : IDL.Func([IDL.Text], [], []),
     'updateSafeZone' : IDL.Func(
         [
           ProfileId,
@@ -483,6 +627,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'updateSubscriptionPlan' : IDL.Func([SubscriptionPlan], [], []),
   });
 };
 

@@ -9,12 +9,19 @@ import {
   Clock,
   CreditCard,
   MapPin,
+  Plus,
   Shield,
+  Smartphone,
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { SubscriptionPlan } from "../../backend.d";
+import { useAuth } from "../../contexts/AuthContext";
+import { useActor } from "../../hooks/useActor";
 import {
   Variant_new_reviewed_dismissed,
   useBullyingAlerts,
@@ -102,22 +109,15 @@ function StatCard({
     </div>
   );
 
-  if (link) {
-    return <Link to={link}>{content}</Link>;
-  }
+  if (link) return <Link to={link}>{content}</Link>;
   return content;
 }
 
 // ── Mini Bar Chart ─────────────────────────────────────────
-interface MiniBarChartProps {
-  data: { label: string; value: number }[];
-  color?: string;
-}
-
 function MiniBarChart({
   data,
   color = "oklch(0.78 0.15 195)",
-}: MiniBarChartProps) {
+}: { data: { label: string; value: number }[]; color?: string }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
     <div className="flex items-end gap-1.5 h-20">
@@ -201,6 +201,115 @@ function AITipCard({ childName }: { childName: string }) {
   );
 }
 
+// ── Wellbeing Score ───────────────────────────────────────
+function WellbeingScore({ score }: { score: number }) {
+  const color =
+    score >= 80
+      ? "oklch(0.72 0.18 155)"
+      : score >= 50
+        ? "oklch(0.78 0.18 70)"
+        : "oklch(0.65 0.22 25)";
+
+  const label =
+    score >= 80 ? "Great" : score >= 50 ? "Good" : "Needs Attention";
+
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  return (
+    <div
+      className="rounded-2xl p-5 flex flex-col gap-3"
+      style={{
+        background: "oklch(0.14 0.025 265)",
+        border: `1px solid ${color}30`,
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <Shield size={14} style={{ color }} />
+        <span className="font-heading font-semibold text-sm text-foreground">
+          Wellbeing Score
+        </span>
+      </div>
+      <div className="flex items-center gap-5">
+        {/* SVG Gauge */}
+        <div className="relative shrink-0">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <title>Wellbeing Score</title>
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke="oklch(0.22 0.04 265)"
+              strokeWidth="8"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke={color}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              transform="rotate(-90 50 50)"
+              style={{ transition: "stroke-dashoffset 1s ease" }}
+            />
+            <text
+              x="50"
+              y="47"
+              textAnchor="middle"
+              fill="oklch(0.95 0.01 265)"
+              fontSize="18"
+              fontWeight="700"
+              fontFamily="Bricolage Grotesque, sans-serif"
+            >
+              {score}
+            </text>
+            <text
+              x="50"
+              y="62"
+              textAnchor="middle"
+              fill="oklch(0.58 0.04 265)"
+              fontSize="9"
+              fontFamily="Sora, sans-serif"
+            >
+              /100
+            </text>
+          </svg>
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          <div style={{ color }} className="font-heading font-bold text-sm">
+            {label}
+          </div>
+          {[
+            { label: "Screen time", ok: score > 60 },
+            { label: "No bullying", ok: score > 70 },
+            { label: "Safe location", ok: score > 50 },
+            { label: "Content safety", ok: score > 65 },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <div
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{
+                  background: item.ok
+                    ? "oklch(0.72 0.18 155)"
+                    : "oklch(0.65 0.22 25)",
+                }}
+              />
+              <span className="text-xs text-muted-foreground">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Alert Item ────────────────────────────────────────────
 function AlertItem({
   alert,
@@ -259,7 +368,11 @@ function AlertItem({
 // ── Dashboard Home ────────────────────────────────────────
 export default function DashboardHome() {
   const { selectedChild } = useDashboard();
+  const { plan } = useAuth();
+  const { actor } = useActor();
   const childId = selectedChild?.id ?? null;
+  const [isAddingData, setIsAddingData] = useState(false);
+  const [upgradeDismissed, setUpgradeDismissed] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const { data: summary, isLoading: summaryLoading } =
@@ -273,7 +386,6 @@ export default function DashboardHome() {
 
   const recentActivity = screenTime.slice(0, 5);
 
-  // Weekly chart data (simulate from today's data + seeded pattern)
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const weeklyData = days.map((label, i) => ({
     label,
@@ -287,6 +399,55 @@ export default function DashboardHome() {
     ? (Number(summary.todaySpendingTotal) / 100).toFixed(2)
     : "0.00";
   const locationAddress = summary?.latestLocation?.address ?? "Unknown";
+
+  // Wellbeing score calculation
+  const screenTimeOk = Number(screenTimeHours) < 4;
+  const noAlerts =
+    alerts.filter((a) => {
+      const s = String(a.status);
+      return (s === "new" || s === "new_") && String(a.severity) === "high";
+    }).length === 0;
+  const wellbeingScore = Math.round(
+    (screenTimeOk ? 30 : 15) +
+      (noAlerts ? 30 : 10) +
+      25 + // safe location (static for demo)
+      20, // content safety (static for demo)
+  );
+
+  const handleAddTestData = async () => {
+    if (!actor || !childId) {
+      toast.error("No child selected");
+      return;
+    }
+    setIsAddingData(true);
+    try {
+      await Promise.all([
+        actor.addBullyingAlert(
+          childId,
+          "Instagram",
+          "medium" as never,
+          "Test message flagged by AI",
+        ),
+        actor.addLocation(
+          childId,
+          37.7749 + Math.random() * 0.01,
+          -122.4194 + Math.random() * 0.01,
+          "Test Location, San Francisco CA",
+        ),
+        actor.addSpending(
+          childId,
+          BigInt(Math.round(Math.random() * 2000)),
+          "Gaming",
+          "Test Merchant",
+        ),
+      ]);
+      toast.success("Test data added! Refresh to see updates.");
+    } catch {
+      toast.error("Failed to add test data");
+    } finally {
+      setIsAddingData(false);
+    }
+  };
 
   return (
     <div
@@ -307,17 +468,113 @@ export default function DashboardHome() {
             })}
           </p>
         </div>
-        <Link to="/dashboard/recommendations">
+        <div className="flex items-center gap-2">
           <Button
+            data-ocid="dashboard.add_test_data.button"
             size="sm"
-            variant="outline"
-            className="gap-2 border-border/60"
+            variant="ghost"
+            className="text-xs text-muted-foreground/50 hover:text-muted-foreground h-7"
+            onClick={handleAddTestData}
+            disabled={isAddingData}
           >
-            <Brain size={14} className="text-primary" />
-            AI Coach
+            <Plus size={10} className="mr-1" />
+            {isAddingData ? "Adding..." : "Add Test Data"}
           </Button>
-        </Link>
+          <Link to="/dashboard/recommendations">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 border-border/60"
+              data-ocid="dashboard.ai_coach.button"
+            >
+              <Brain size={14} className="text-primary" />
+              AI Coach
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Setup Guide CTA (if no children) */}
+      {selectedChild === null && !summaryLoading && (
+        <div
+          className="rounded-2xl p-5 flex items-center gap-4"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.18 0.06 195 / 0.4), oklch(0.14 0.025 265))",
+            border: "1px solid oklch(0.78 0.15 195 / 0.3)",
+          }}
+        >
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: "oklch(0.2 0.06 195 / 0.5)",
+              color: "oklch(0.78 0.15 195)",
+            }}
+          >
+            <Smartphone size={22} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-heading font-bold text-foreground">
+              Get started with GuardianAI
+            </h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Set up your first child profile and install the app on their
+              device.
+            </p>
+          </div>
+          <Link to="/dashboard/setup-guide">
+            <Button
+              data-ocid="dashboard.setup_guide.button"
+              size="sm"
+              className="bg-primary text-primary-foreground hover:opacity-90 shrink-0"
+            >
+              Setup Guide
+              <ArrowRight size={12} className="ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Free plan upgrade banner */}
+      {plan === SubscriptionPlan.free && !upgradeDismissed && (
+        <div
+          className="rounded-xl px-4 py-3 flex items-center gap-3"
+          style={{
+            background: "oklch(0.18 0.06 195 / 0.2)",
+            border: "1px solid oklch(0.78 0.15 195 / 0.25)",
+          }}
+        >
+          <Zap
+            size={14}
+            style={{ color: "oklch(0.78 0.18 70)" }}
+            className="shrink-0"
+          />
+          <p className="text-xs text-foreground flex-1">
+            <span className="font-semibold">Upgrade to Family</span> to unlock
+            AI bullying detection, content analysis, and parenting coach.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link to="/subscribe/$plan" params={{ plan: "family" }}>
+              <Button
+                data-ocid="dashboard.upgrade_banner.button"
+                size="sm"
+                className="h-7 text-xs bg-primary text-primary-foreground hover:opacity-90"
+              >
+                Upgrade — $9.99/mo
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground p-0"
+              onClick={() => setUpgradeDismissed(true)}
+              data-ocid="dashboard.upgrade_banner.close_button"
+            >
+              ×
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -369,7 +626,7 @@ export default function DashboardHome() {
 
       {/* Main content grid */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left col: alerts + activity */}
+        {/* Left col */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Recent alerts */}
           <div className="rounded-2xl p-5 bg-card border border-border">
@@ -396,6 +653,7 @@ export default function DashboardHome() {
                   variant="ghost"
                   size="sm"
                   className="text-xs text-muted-foreground h-7 gap-1"
+                  data-ocid="dashboard.view_alerts.button"
                 >
                   View all <ArrowRight size={12} />
                 </Button>
@@ -443,6 +701,7 @@ export default function DashboardHome() {
                   variant="ghost"
                   size="sm"
                   className="text-xs text-muted-foreground h-7 gap-1"
+                  data-ocid="dashboard.view_activity.button"
                 >
                   View all <ArrowRight size={12} />
                 </Button>
@@ -502,9 +761,12 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* Right col: AI tip + weekly chart */}
+        {/* Right col */}
         <div className="flex flex-col gap-6">
           <AITipCard childName={selectedChild?.name ?? "Your child"} />
+
+          {/* Wellbeing Score */}
+          <WellbeingScore score={wellbeingScore} />
 
           {/* Weekly screen time */}
           <div className="rounded-2xl p-5 bg-card border border-border">
@@ -552,6 +814,11 @@ export default function DashboardHome() {
                   label: "AI Recommendations",
                   to: "/dashboard/recommendations",
                   icon: <Brain size={14} />,
+                },
+                {
+                  label: "Setup Guide",
+                  to: "/dashboard/setup-guide",
+                  icon: <Smartphone size={14} />,
                 },
               ].map((item) => (
                 <Link key={item.to} to={item.to}>

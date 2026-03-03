@@ -1,100 +1,49 @@
-# GuardianAI - AI-Powered Parental Control & Child Safety Platform
+# GuardianAI
 
 ## Current State
-New project. No existing code.
+- Marketing landing page at `/` with hero, features, how-it-works, testimonials, and pricing sections
+- 8-section parent dashboard at `/dashboard/*`: Overview, Location, Screen Time, Content Analysis, Bullying Detection, Spending Monitor, AI Coach, Settings
+- Backend: Motoko with child profiles, location, screen time, content, alerts, recommendations, safe zones, spending, and parent settings
+- Authorization component installed
+- 2 generated images present: `guardian-shield-icon-transparent.dim_400x400.png`, `hero-app-mockup.dim_800x900.png`
+- No payments/subscriptions, no auth flow (login/signup), no child device setup guide
+- All pricing CTAs link directly to `/dashboard` (no checkout)
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Marketing/Landing page** (homepage): Hero, feature highlights, testimonials, pricing, CTA to download/sign up
-- **Parent Dashboard app**: Full parental monitoring and insights interface
-
-**Marketing Site Sections:**
-- Hero section with app preview mockup
-- Feature showcase: Location tracking, Screen time analytics, Content analysis, Bullying detection, Spending tracker, AI recommendations
-- How it works (3-step flow)
-- Testimonials / social proof
-- Pricing tiers
-- Footer with links
-
-**Parent Dashboard App Sections:**
-
-1. **Overview / Home Dashboard**
-   - Child profile selector (support multiple children)
-   - Daily summary cards: screen time today, location status, alerts count, spending today
-   - AI Insight of the day (parenting recommendation)
-   - Recent alerts feed (bullying flags, inappropriate content, location anomalies)
-
-2. **Location Tracking**
-   - Current location display (map-style UI with address)
-   - Location history timeline (today, this week)
-   - Safe zones management (home, school, friend's house)
-   - Location alert log (left safe zone, arrived at destination)
-
-3. **Screen Time & App Usage**
-   - Total screen time per day/week/month chart
-   - Per-app usage breakdown (social, gaming, educational, entertainment)
-   - Most used apps list with time spent
-   - Screen time limits and schedule settings
-   - App blocking controls
-
-4. **Content Analysis (AI-Powered)**
-   - Content categories breakdown (educational, social, gaming, entertainment, mature)
-   - Flagged content log (inappropriate keywords, mature themes)
-   - Websites visited summary
-   - AI risk score per content category
-   - Trend analysis (is usage improving or worsening)
-
-5. **Bullying Detection**
-   - AI-analyzed conversation sentiment overview
-   - Alert feed: flagged messages with severity (low/medium/high)
-   - Keywords and patterns detected
-   - Contacts flagged as potential bullies
-   - Recommendations for parents on how to handle each situation
-
-6. **Spending & Financial Activity**
-   - Total spending this month
-   - Spending by category (in-app purchases, subscriptions, online shopping)
-   - Transaction history
-   - Spending alerts and limits
-   - Allowance tracker
-
-7. **AI Parenting Recommendations**
-   - Personalized tips based on child's usage patterns
-   - Weekly parenting report (auto-generated)
-   - Resource library (articles, guides)
-   - Goal setting for child's digital wellness
-
-8. **Settings & Child Profiles**
-   - Add/edit child profiles (name, age, device)
-   - Notification preferences
-   - Reporting schedule
-   - Parent account management
-
-**Backend Data Models:**
-- Child profiles (id, name, age, device info)
-- Location records (childId, lat, lng, timestamp, address)
-- Safe zones (childId, name, lat, lng, radius)
-- Screen time records (childId, appName, category, durationMinutes, date)
-- Content analysis records (childId, url, category, riskScore, flagged, timestamp)
-- Bullying alerts (childId, platform, severity, snippet, timestamp, status)
-- Spending records (childId, amount, category, merchant, timestamp)
-- AI recommendations (childId, type, content, priority, timestamp)
-- Parent settings and notifications preferences
+- **Parent Auth pages**: `/login` and `/signup` with email + password fields; store email/password in backend; redirect to `/dashboard` on success
+- **Stripe payment integration**: Subscription checkout for Family ($9.99/mo) and Guardian Pro ($19.99/mo) plans; payment confirmation page at `/subscribe/:plan`
+- **Child Device Setup Guide**: Dedicated page at `/setup-guide` explaining step-by-step how parents install the tracking app on the child's phone (Android + iOS); include QR code instructions, screenshots, and tips
+- **Images throughout the app**: Generate and wire 8+ images:
+  - Feature section illustration images (6 feature cards)
+  - App screenshot showing location tracking
+  - App screenshot showing content analysis
+  - App screenshot showing bullying detection dashboard
+  - Testimonial avatar photos (3)
+  - "How It Works" step illustrations
+- **Password tracking**: Backend stores hashed parent email + password for account login
+- **Dashboard subscription gate**: Show upgrade prompt if user is on free plan
 
 ### Modify
-- Nothing (new project)
+- Landing page pricing CTAs: "Start Free Trial" / "Get Started" buttons link to `/signup` then to `/subscribe/:plan` for paid tiers
+- Nav "Sign In" → `/login`, "Get Started Free" → `/signup`
+- Dashboard nav: add "Setup Guide" link and show current plan/upgrade button
+- Dashboard layout: show user email in top-right, add logout option
+- Settings page: add "Manage Subscription" section linking to Stripe portal
 
 ### Remove
-- Nothing (new project)
+- Nothing removed
 
 ## Implementation Plan
-1. Set up Motoko backend with all data models and CRUD APIs
-2. Seed realistic sample data for demo purposes (multiple children, rich activity history)
-3. Build marketing landing page with modern design, animations, feature sections
-4. Build main app with sidebar navigation and all 8 dashboard sections
-5. Wire all dashboard sections to backend APIs
-6. Implement charts and data visualizations for metrics
-7. Add AI recommendation display logic
-8. Implement alert system with severity badges
-9. Polish UI with animations, responsive design, accessibility
+1. Select `stripe` Caffeine component
+2. Generate updated Motoko backend with: user accounts (email/password hash, subscription tier), Stripe subscription management methods
+3. Generate images: 6 feature illustrations, 3 testimonial avatars, 2 app screenshots, setup guide phone screenshots
+4. Build frontend:
+   - `/login` page: email + password form, "Forgot password" link
+   - `/signup` page: email + password + confirm password, plan selection
+   - `/subscribe/:plan` page: Stripe checkout integration
+   - `/setup-guide` page: step-by-step Android + iOS instructions with phone mockup images
+   - Wire all generated images into landing page feature cards, testimonial section, how-it-works
+   - Dashboard: user profile in nav, logout, setup guide link, subscription status + upgrade CTA
+   - Payments: subscription plan selector, Stripe checkout button, confirmation state
